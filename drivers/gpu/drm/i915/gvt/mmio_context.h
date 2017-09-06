@@ -57,4 +57,5 @@ int intel_vgpu_restore_inhibit_context(struct intel_vgpu *vgpu,
 	(_MASKED_BIT_ENABLE(CTX_CTRL_ENGINE_CTX_RESTORE_INHIBIT) == \
 	((a) & _MASKED_BIT_ENABLE(CTX_CTRL_ENGINE_CTX_RESTORE_INHIBIT)))
 
+int intel_gvt_vgpu_conformance_check(struct intel_vgpu *vgpu, int ring_id);
 #endif
