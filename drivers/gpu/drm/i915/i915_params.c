@@ -196,6 +196,10 @@ i915_param_named(domain_scaler_owner, int, 0400,
  *
  */
 
+
+i915_param_named(enable_conformance_check, bool, 0400,
+	"To toggle the GVT guest conformance feature(default:true)");
+
 static __always_inline void _print_param(struct drm_printer *p,
 					 const char *name,
 					 const char *type,
