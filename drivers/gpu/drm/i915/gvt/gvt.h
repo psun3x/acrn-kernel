@@ -588,6 +588,7 @@ struct intel_gvt_ops {
 	void (*emulate_hotplug)(struct intel_vgpu *vgpu, bool connected);
 };
 
+int gvt_dom0_ready(struct drm_i915_private *dev_priv);
 
 enum {
 	GVT_FAILSAFE_UNSUPPORTED_GUEST,
