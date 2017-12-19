@@ -255,6 +255,21 @@ static int init_service_thread(struct intel_gvt *gvt)
 	return 0;
 }
 
+void intel_gvt_init_pipe_info(struct intel_gvt *gvt);
+
+/*
+ * When enabling multi-plane in DomU, an issue is that the PLANE_BUF_CFG
+ * register cannot be updated dynamically, since Dom0 has no idea of the
+ * plane information of DomU's planes, so here we statically allocate the
+ * ddb entries for all the possible enabled planes.
+ */
+static void intel_gvt_init_ddb(struct intel_gvt *gvt)
+{
+	struct skl_ddb_allocation *ddb = &gvt->ddb;
+
+	memset(ddb, 0, sizeof(*ddb));
+}
+
 /**
  * intel_gvt_clean_device - clean a GVT device
  * @dev_priv: i915 private
@@ -366,6 +381,9 @@ int intel_gvt_init_device(struct drm_i915_private *dev_priv)
 		gvt_err("failed to init vgpu type groups: %d\n", ret);
 		goto out_clean_types;
 	}
+
+	intel_gvt_init_pipe_info(gvt);
+	intel_gvt_init_ddb(gvt);
 
 	vgpu = intel_gvt_create_idle_vgpu(gvt);
 	if (IS_ERR(vgpu)) {

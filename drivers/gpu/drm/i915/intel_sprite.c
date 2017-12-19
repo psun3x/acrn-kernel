@@ -60,6 +60,10 @@ bool is_planar_yuv_format(u32 pixelformat)
 	}
 }
 
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+#include "gvt.h"
+#endif
+
 int intel_usecs_to_scanlines(const struct drm_display_mode *adjusted_mode,
 			     int usecs)
 {
@@ -522,6 +526,11 @@ skl_program_plane(struct intel_plane *plane,
 		plane_color_ctl = plane_state->color_ctl |
 			glk_plane_color_ctl_crtc(crtc_state);
 
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+	if (dev_priv->gvt &&
+			dev_priv->gvt->pipe_info[pipe].plane_owner[plane_id])
+		return;
+#endif
 	/* Sizes are 0 based */
 	src_w--;
 	src_h--;
@@ -634,6 +643,12 @@ skl_disable_plane(struct intel_plane *plane,
 	enum plane_id plane_id = plane->id;
 	enum pipe pipe = plane->pipe;
 	unsigned long irqflags;
+
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+	if (dev_priv->gvt &&
+			dev_priv->gvt->pipe_info[pipe].plane_owner[plane_id])
+		return;
+#endif
 
 	spin_lock_irqsave(&dev_priv->uncore.lock, irqflags);
 
