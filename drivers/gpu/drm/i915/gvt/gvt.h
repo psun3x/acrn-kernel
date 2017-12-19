@@ -288,6 +288,7 @@ struct intel_gvt_firmware {
 };
 
 #define NR_MAX_INTEL_VGPU_TYPES 20
+
 struct intel_vgpu_type {
 	char name[16];
 	unsigned int avail_instance;
@@ -296,6 +297,16 @@ struct intel_vgpu_type {
 	unsigned int fence;
 	unsigned int weight;
 	enum intel_vgpu_edid resolution;
+};
+
+struct intel_gvt_pipe_info {
+	enum pipe pipe_num;
+	int owner;
+	struct intel_gvt *gvt;
+	struct work_struct vblank_work;
+	int plane_owner[I915_MAX_PLANES];
+	struct skl_ddb_entry plane_ddb_y[I915_MAX_PLANES];
+	struct skl_ddb_entry plane_ddb_uv[I915_MAX_PLANES];
 };
 
 struct intel_gvt {
@@ -330,6 +341,10 @@ struct intel_gvt {
 	 * use it with atomic bit ops so that no need to use gvt big lock.
 	 */
 	unsigned long service_request;
+
+	struct intel_gvt_pipe_info pipe_info[I915_MAX_PIPES];
+
+	struct skl_ddb_allocation ddb;
 
 	struct {
 		struct engine_mmio *mmio;
