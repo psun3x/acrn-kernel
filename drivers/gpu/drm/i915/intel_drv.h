@@ -1613,4 +1613,7 @@ unsigned int i9xx_plane_max_stride(struct intel_plane *plane,
 				   unsigned int rotation);
 int bdw_get_pipemisc_bpp(struct intel_crtc *crtc);
 
+/* intel_dp.c */
+void intel_dp_unpack_aux(uint32_t src, uint8_t *dst, int dst_bytes);
+
 #endif /* __INTEL_DRV_H__ */
