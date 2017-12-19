@@ -40,6 +40,10 @@
 #include "intel_sprite.h"
 #include "../../../platform/x86/intel_ips.h"
 
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+#include "gvt.h"
+#endif
+
 /**
  * DOC: RC6
  *
@@ -5322,11 +5326,35 @@ skl_compute_ddb(struct intel_atomic_state *state)
 
 	memcpy(ddb, &dev_priv->wm.skl_hw.ddb, sizeof(*ddb));
 
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+	/*
+	 * In GVT environemnt, allocate ddb for all planes in active crtc.
+	 * When there is active pipe change, intel_state active_crtcs is
+	 * not zero and updated before dev_priv, so use intel_state
+	 * active_crtc when it is not zero.
+	 */
+	if (dev_priv->gvt) {
+		unsigned int active_crtcs;
+
+		active_crtcs = state->active_crtcs ?
+			state->active_crtcs : dev_priv->active_crtcs;
+		intel_gvt_allocate_ddb(dev_priv->gvt, active_crtcs);
+	}
+#endif
+
 	for_each_oldnew_intel_crtc_in_state(state, crtc, old_crtc_state,
 					    new_crtc_state, i) {
 		ret = skl_allocate_pipe_ddb(new_crtc_state, ddb);
 		if (ret)
 			return ret;
+
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+		if (dev_priv->gvt) {
+			memcpy(new_crtc_state->wm.skl.plane_ddb_y, 
+				&dev_priv->gvt->pipe_info[i].plane_ddb_y, 
+				sizeof(new_crtc_state->wm.skl.plane_ddb_y));
+		}
+#endif
 
 		ret = skl_ddb_add_affected_planes(old_crtc_state,
 						  new_crtc_state);
