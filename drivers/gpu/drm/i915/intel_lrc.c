@@ -2895,6 +2895,14 @@ populate_lr_context(struct intel_context *ce,
 			_MASKED_BIT_ENABLE(CTX_CTRL_ENGINE_CTX_RESTORE_INHIBIT |
 					   CTX_CTRL_ENGINE_CTX_SAVE_INHIBIT);
 
+	/* write the context's pid and hw_id/cid to the per-context HWS page */
+	if(intel_vgpu_active(engine->i915) && pid_nr(ce->gem_context->pid)) {
+		*(u32*)(vaddr + LRC_PPHWSP_PN * PAGE_SIZE + I915_GEM_HWS_PID_ADDR)
+			= pid_nr(ce->gem_context->pid) & 0x3fffff;
+		*(u32*)(vaddr + LRC_PPHWSP_PN * PAGE_SIZE + I915_GEM_HWS_CID_ADDR)
+			= ce->gem_context->hw_id & 0x3fffff;
+	}
+
 	ret = 0;
 err_unpin_ctx:
 	__i915_gem_object_flush_map(ctx_obj,

@@ -40,6 +40,7 @@ typedef u8 intel_engine_mask_t;
 struct intel_hw_status_page {
 	struct i915_vma *vma;
 	u32 *addr;
+	u32 ggtt_offset;
 };
 
 struct intel_instdone {
