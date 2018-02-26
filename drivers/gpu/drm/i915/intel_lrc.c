@@ -650,10 +650,24 @@ static void inject_preempt_context(struct intel_engine_cs *engine)
 	 * the state of the GPU is known (idle).
 	 */
 	GEM_TRACE("%s\n", engine->name);
-	for (n = execlists_num_ports(execlists); --n; )
-		write_desc(execlists, 0, n);
 
-	write_desc(execlists, ce->lrc_desc, n);
+	if (intel_vgpu_active(engine->i915) &&
+			PVMMIO_LEVEL(engine->i915, PVMMIO_ELSP_SUBMIT)) {
+		u32 __iomem *elsp_data = engine->i915->shared_page->elsp_data;
+
+		spin_lock(&engine->i915->shared_page_lock);
+		writel(0, elsp_data);
+		writel(0, elsp_data + 1);
+		writel(upper_32_bits(ce->lrc_desc), elsp_data + 2);
+		writel(lower_32_bits(ce->lrc_desc), execlists->submit_reg);
+		spin_unlock(&engine->i915->shared_page_lock);
+
+	} else {
+		for (n = execlists_num_ports(execlists); --n; )
+			write_desc(execlists, 0, n);
+
+		write_desc(execlists, ce->lrc_desc, n);
+	}
 
 	/* we need to manually load the submit queue */
 	if (execlists->ctrl_reg)
