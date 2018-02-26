@@ -195,7 +195,6 @@ i915_param_named(enable_gvt, bool, 0400,
 i915_param_named(domain_scaler_owner, int, 0400,
         "scaler owners for each domain and for each pipe ids can be from 0-F");
 
-
 i915_param_named(enable_pvmmio, uint, 0400,
 	"Enable pv mmio feature and set pvmmio level, default 1."
 	"This parameter could only set from host, guest value is set through vgt_if");
