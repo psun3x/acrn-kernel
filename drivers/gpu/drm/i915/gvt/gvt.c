@@ -266,10 +266,10 @@ void intel_gvt_init_pipe_info(struct intel_gvt *gvt);
  * plane information of DomU's planes, so here we statically allocate the
  * ddb entries for all the possible enabled planes.
  */
-static void intel_gvt_init_ddb(struct intel_gvt *gvt)
+void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
+		struct skl_ddb_allocation *ddb, unsigned int active_crtcs)
 {
 	struct drm_i915_private *dev_priv = gvt->dev_priv;
-	struct skl_ddb_allocation *ddb = &gvt->ddb;
 	struct intel_gvt_pipe_info *pipe_info = gvt->pipe_info;
 	const struct intel_runtime_info *info = RUNTIME_INFO(dev_priv);
 	unsigned int pipe_size, ddb_size, plane_size, plane_cnt;
@@ -281,9 +281,19 @@ static void intel_gvt_init_ddb(struct intel_gvt *gvt)
 	ddb_size -= 4; /* 4 blocks for bypass path allocation */
 	pipe_size = ddb_size / INTEL_INFO(dev_priv)->num_pipes;
 
+	int i = 0;
+	int num_active = hweight32(active_crtcs);
+
+	if (!num_active)
+		return;
+
+	ddb_size = INTEL_INFO(dev_priv)->ddb_size;
+	ddb_size -= 4; /* 4 blocks for bypass path allocation */
+	pipe_size = ddb_size / num_active;
+
 	memset(ddb, 0, sizeof(*ddb));
-	for_each_pipe(dev_priv, pipe) {
-		start = pipe * ddb_size / INTEL_INFO(dev_priv)->num_pipes;
+	for_each_pipe_masked(dev_priv, pipe, active_crtcs) {
+		start = pipe_size * (i++);
 		end = start + pipe_size;
 		pipe_info[pipe].plane_ddb_y[PLANE_CURSOR].start = end - 8;
 		pipe_info[pipe].plane_ddb_y[PLANE_CURSOR].end = end;
@@ -296,6 +306,8 @@ static void intel_gvt_init_ddb(struct intel_gvt *gvt)
 				(plane * (pipe_size - 8) / plane_cnt);
 			pipe_info[pipe].plane_ddb_y[plane].end =
 				pipe_info[pipe].plane_ddb_y[plane].start + plane_size;
+
+
 		}
 	}
 }
@@ -413,7 +425,6 @@ int intel_gvt_init_device(struct drm_i915_private *dev_priv)
 	}
 
 	intel_gvt_init_pipe_info(gvt);
-	intel_gvt_init_ddb(gvt);
 
 	vgpu = intel_gvt_create_idle_vgpu(gvt);
 	if (IS_ERR(vgpu)) {

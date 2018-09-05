@@ -605,6 +605,8 @@ struct intel_gvt_ops {
 	void (*emulate_hotplug)(struct intel_vgpu *vgpu, bool connected);
 };
 
+void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
+		struct skl_ddb_allocation *ddb, unsigned int active_crtcs);
 
 enum {
 	GVT_FAILSAFE_UNSUPPORTED_GUEST,
