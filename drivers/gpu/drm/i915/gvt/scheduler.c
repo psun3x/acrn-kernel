@@ -713,6 +713,8 @@ static int dispatch_workload(struct intel_vgpu_workload *workload)
 	}
 
 	ret = prepare_workload(workload);
+
+	workload->guilty_count = atomic_read(&workload->req->gem_context->guilty_count);
 out:
 	if (ret) {
 		/* We might still need to add request with
@@ -956,6 +958,9 @@ static void complete_current_workload(struct intel_gvt *gvt, int ring_id)
 
 	list_del_init(&workload->list);
 
+	if (workload->status == -EIO)
+		intel_vgpu_reset_submission(vgpu, 1 << ring_id);
+
 	if (workload->status || vgpu->resetting_eng & BIT(ring_id)) {
 		release_shadow_batch_buffer(workload);
 		if(gvt_shadow_wa_ctx)
@@ -989,6 +994,18 @@ static void complete_current_workload(struct intel_gvt *gvt, int ring_id)
 
 	mutex_unlock(&gvt->sched_lock);
 	mutex_unlock(&vgpu->vgpu_lock);
+}
+
+static void inject_error_cs_irq(struct intel_vgpu *vgpu, int ring_id)
+{
+	enum intel_gvt_event_type events[] = {
+		RCS_CMD_STREAMER_ERR,
+		BCS_CMD_STREAMER_ERR,
+		VCS_CMD_STREAMER_ERR,
+		VCS2_CMD_STREAMER_ERR,
+		VECS_CMD_STREAMER_ERR,
+	};
+	intel_vgpu_trigger_virtual_event(vgpu, events[ring_id]);
 }
 
 struct workload_thread_param {
@@ -1057,6 +1074,17 @@ static int workload_thread(void *priv)
 				workload, lret);
 		if (lret >= 0 && workload->status == -EINPROGRESS)
 			workload->status = 0;
+
+		/*
+		 * increased guilty_count means that this request triggerred
+		 * a GPU reset, so we need to notify the guest about the
+		 * hang.
+		 */
+		if (workload->guilty_count <
+				atomic_read(&workload->req->gem_context->guilty_count)) {
+			workload->status = -EIO;
+			inject_error_cs_irq(workload->vgpu, ring_id);
+		}
 
 complete:
 		gvt_dbg_sched("will complete workload %p, status: %d\n",
