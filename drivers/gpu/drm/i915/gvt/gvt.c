@@ -44,6 +44,7 @@ struct intel_gvt_host intel_gvt_host;
 static const char * const supported_hypervisors[] = {
 	[INTEL_GVT_HYPERVISOR_XEN] = "XEN",
 	[INTEL_GVT_HYPERVISOR_KVM] = "KVM",
+	[INTEL_GVT_HYPERVISOR_ACRN] = "ACRN",
 };
 
 static struct intel_vgpu_type *intel_gvt_find_vgpu_type(struct intel_gvt *gvt,
