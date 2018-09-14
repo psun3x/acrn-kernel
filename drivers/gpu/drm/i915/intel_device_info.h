@@ -183,6 +183,8 @@ struct intel_device_info {
 	u32 display_mmio_offset;
 
 	u8 num_pipes;
+	u8 num_sprites[I915_MAX_PIPES];
+        u8 num_scalers[I915_MAX_PIPES];
 
 #define DEFINE_FLAG(name) u8 name:1
 	DEV_INFO_FOR_EACH_FLAG(DEFINE_FLAG);
