@@ -93,6 +93,7 @@
 #include "i915_user_extensions.h"
 #include "intel_lrc_reg.h"
 #include "intel_workarounds.h"
+#include "i915_vgpu.h"
 
 #define I915_CONTEXT_CREATE_FLAGS_SINGLE_TIMELINE (1 << 1)
 #define I915_CONTEXT_PARAM_VM 0x9
@@ -249,6 +250,12 @@ static void i915_gem_context_free(struct i915_gem_context *ctx)
 
 	list_del(&ctx->link);
 	mutex_destroy(&ctx->mutex);
+
+	if (intel_vgpu_active(ctx->i915))
+		ida_simple_remove(&ctx->i915->contexts.hw_ida, ctx->hw_id &
+				~(0x7 << SIZE_CONTEXT_HW_ID_GVT));
+	else
+		ida_simple_remove(&ctx->i915->contexts.hw_ida, ctx->hw_id);
 
 	kfree_rcu(ctx, rcu);
 }
