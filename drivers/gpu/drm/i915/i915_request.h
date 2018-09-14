@@ -173,6 +173,7 @@ struct i915_request {
 	 * request has not completed and guarded by the timeline mutex.
 	 */
 	struct i915_timeline_cacheline *hwsp_cacheline;
+	u32 global_seqno;
 
 	/** Position in the ring of the start of the request */
 	u32 head;
