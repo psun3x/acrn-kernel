@@ -45,6 +45,7 @@
 #include <drm/i915_drm.h>
 
 #include "i915_drv.h"
+#include "gvt/gvt.h"
 #include "i915_gem_clflush.h"
 #include "i915_reset.h"
 #include "i915_trace.h"
