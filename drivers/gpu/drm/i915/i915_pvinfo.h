@@ -46,6 +46,9 @@ enum vgt_g2v_type {
 	VGT_G2V_PPGTT_L4_PAGE_TABLE_DESTROY,
 	VGT_G2V_EXECLIST_CONTEXT_CREATE,
 	VGT_G2V_EXECLIST_CONTEXT_DESTROY,
+	VGT_G2V_PPGTT_L4_ALLOC,
+	VGT_G2V_PPGTT_L4_CLEAR,
+	VGT_G2V_PPGTT_L4_INSERT,
 	VGT_G2V_MAX,
 };
 
@@ -73,6 +76,13 @@ struct pv_plane_update {
 	u32 cus_ctl;
 };
 
+struct pv_ppgtt_update {
+	u64 pdp;
+	u64 start;
+	u64 length;
+	u32 cache_level;
+};
+
 /* shared page(4KB) between gvt and VM, located at the first page next
  * to MMIO region(2MB size normally).
  */
@@ -80,7 +90,8 @@ struct gvt_shared_page {
 	u32 elsp_data[4];
 	u32 reg_addr;
 	struct pv_plane_update pv_plane;
-	u32 rsvd2[0x400 - 23];
+	struct pv_ppgtt_update pv_ppgtt;
+	u32 rsvd2[0x400 - 32];
 };
 
 #define VGPU_PVMMIO(vgpu) vgpu_vreg_t(vgpu, vgtif_reg(enable_pvmmio))
@@ -91,6 +102,7 @@ struct gvt_shared_page {
 enum pvmmio_levels {
 	PVMMIO_ELSP_SUBMIT = 0x1,
 	PVMMIO_PLANE_UPDATE = 0x2,
+	PVMMIO_PPGTT_UPDATE = 0x10,
 };
 
 /*
