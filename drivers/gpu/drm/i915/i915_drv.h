@@ -60,6 +60,7 @@
 #include "i915_fixed.h"
 #include "i915_params.h"
 #include "i915_reg.h"
+#include "i915_pvinfo.h"
 #include "i915_utils.h"
 
 #include "intel_bios.h"
@@ -1507,6 +1508,9 @@ struct drm_i915_private {
 	 */
 	resource_size_t stolen_usable_size;	/* Total size minus reserved ranges */
 
+	struct gvt_shared_page *shared_page;
+	spinlock_t shared_page_lock;
+
 	struct intel_uncore uncore;
 
 	struct i915_virtual_gpu vgpu;
@@ -2759,7 +2763,7 @@ static inline bool intel_gvt_active(struct drm_i915_private *dev_priv)
 	return dev_priv->gvt;
 }
 
-static inline bool intel_vgpu_active(struct drm_i915_private *dev_priv)
+static inline bool intel_vgpu_active(const struct drm_i915_private *dev_priv)
 {
 	return dev_priv->vgpu.active;
 }
