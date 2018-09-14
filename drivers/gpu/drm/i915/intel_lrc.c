@@ -2430,8 +2430,8 @@ logical_ring_default_irqs(struct intel_engine_cs *engine)
 		const u8 irq_shifts[] = {
 			[RCS0]  = GEN8_RCS_IRQ_SHIFT,
 			[BCS0]  = GEN8_BCS_IRQ_SHIFT,
-			[VCS0]  = GEN8_VCS0_IRQ_SHIFT,
-			[VCS1]  = GEN8_VCS1_IRQ_SHIFT,
+			[VCS0]  = GEN8_VCS1_IRQ_SHIFT,
+			[VCS1]  = GEN8_VCS2_IRQ_SHIFT,
 			[VECS0] = GEN8_VECS_IRQ_SHIFT,
 		};
 
@@ -2440,6 +2440,16 @@ logical_ring_default_irqs(struct intel_engine_cs *engine)
 
 	engine->irq_enable_mask = GT_RENDER_USER_INTERRUPT << shift;
 	engine->irq_keep_mask = GT_CONTEXT_SWITCH_INTERRUPT << shift;
+}
+
+static void i915_error_reset(struct work_struct *work) {
+	struct intel_engine_cs *engine =
+		container_of(work, struct intel_engine_cs,
+			     reset_work);
+	i915_handle_error(engine->i915, 1 << engine->id,
+			I915_ERROR_CAPTURE,
+			"Received error interrupt from engine %d",
+			engine->id);
 }
 
 static int
@@ -2459,6 +2469,8 @@ logical_ring_setup(struct intel_engine_cs *engine)
 
 	logical_ring_default_vfuncs(engine);
 	logical_ring_default_irqs(engine);
+
+	INIT_WORK(&engine->reset_work, i915_error_reset);
 
 	return 0;
 }
