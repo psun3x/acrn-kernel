@@ -2665,6 +2665,15 @@ logical_ring_default_irqs(struct intel_engine_cs *engine)
 	engine->irq_keep_mask = GT_CONTEXT_SWITCH_INTERRUPT << shift;
 }
 
+static void i915_error_reset(struct work_struct *work) {
+	struct intel_engine_cs *engine =
+		container_of(work, struct intel_engine_cs, reset_work);
+	i915_handle_error(engine->i915, 1 << engine->id,
+			I915_ERROR_CAPTURE,
+			"Received error interrupt from engine %d",
+			engine->id);
+}
+
 int intel_execlists_submission_setup(struct intel_engine_cs *engine)
 {
 	/* Intentionally left blank. */
@@ -2681,6 +2690,8 @@ int intel_execlists_submission_setup(struct intel_engine_cs *engine)
 		engine->emit_flush = gen8_emit_flush_render;
 		engine->emit_fini_breadcrumb = gen8_emit_fini_breadcrumb_rcs;
 	}
+
+	INIT_WORK(&engine->reset_work, i915_error_reset);
 
 	return 0;
 }
