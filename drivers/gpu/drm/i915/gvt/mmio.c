@@ -310,9 +310,19 @@ int intel_vgpu_init_mmio(struct intel_vgpu *vgpu)
 {
 	const struct intel_gvt_device_info *info = &vgpu->gvt->device_info;
 
-	vgpu->mmio.vreg = vzalloc(info->mmio_size);
+	vgpu->mmio.sreg = vzalloc(info->mmio_size);
+	vgpu->mmio.vreg = (void *)__get_free_pages(GFP_KERNEL,
+			info->mmio_size_order);
 	if (!vgpu->mmio.vreg)
 		return -ENOMEM;
+
+	vgpu->mmio.shared_page = (struct gvt_shared_page *) __get_free_pages(
+			GFP_KERNEL, 0);
+	if (!vgpu->mmio.shared_page) {
+		vfree(vgpu->mmio.vreg);
+		vgpu->mmio.vreg = NULL;
+		return -ENOMEM;
+	}
 
 	intel_vgpu_reset_mmio(vgpu, true);
 
@@ -326,6 +336,10 @@ int intel_vgpu_init_mmio(struct intel_vgpu *vgpu)
  */
 void intel_vgpu_clean_mmio(struct intel_vgpu *vgpu)
 {
-	vfree(vgpu->mmio.vreg);
-	vgpu->mmio.vreg = NULL;
+	const struct intel_gvt_device_info *info = &vgpu->gvt->device_info;
+
+	vfree(vgpu->mmio.sreg);
+	free_pages((unsigned long) vgpu->mmio.vreg, info->mmio_size_order);
+	free_pages((unsigned long) vgpu->mmio.shared_page, 0);
+	vgpu->mmio.vreg = vgpu->mmio.sreg = vgpu->mmio.shared_page = NULL;
 }
