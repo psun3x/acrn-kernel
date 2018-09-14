@@ -131,9 +131,11 @@ struct vgt_if {
 
 	u32 execlist_context_descriptor_lo;
 	u32 execlist_context_descriptor_hi;
+	u32 enable_pvmmio;
+	u32 pv_mmio;
 	u32 scaler_owned;
 
-	u32  rsv7[0x200 - 25];    /* pad to one page */
+	u32  rsv7[0x200 - 27];    /* pad to one page */
 } __packed;
 
 #define vgtif_reg(x) \
