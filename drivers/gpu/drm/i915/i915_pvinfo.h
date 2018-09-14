@@ -49,12 +49,37 @@ enum vgt_g2v_type {
 	VGT_G2V_MAX,
 };
 
+/* shared page(4KB) between gvt and VM, located at the first page next
+ * to MMIO region(2MB size normally).
+ */
+struct gvt_shared_page {
+	u32 elsp_data[4];
+	u32 reg_addr;
+	u32 rsvd2[0x400 - 5];
+};
+
+#define VGPU_PVMMIO(vgpu) vgpu_vreg_t(vgpu, vgtif_reg(enable_pvmmio))
+
+/*
+ * define different levels of PVMMIO optimization
+ */
+enum pvmmio_levels {
+	PVMMIO_ELSP_SUBMIT = 0x1,
+	PVMMIO_PLANE_UPDATE = 0x2,
+        PVMMIO_PLANE_WM_UPDATE = 0x4,
+        PVMMIO_PPGTT_UPDATE = 0x10,
+        PVMMIO_GGTT_UPDATE = 0x20,
+};
+
 /*
  * VGT capabilities type
  */
 #define VGT_CAPS_FULL_PPGTT		BIT(2)
 #define VGT_CAPS_HWSP_EMULATION		BIT(3)
 #define VGT_CAPS_HUGE_GTT		BIT(4)
+
+#define PVMMIO_LEVEL(dev_priv, level) \
+	(intel_vgpu_active(dev_priv) && (i915_modparams.enable_pvmmio & level))
 
 struct vgt_if {
 	u64 magic;		/* VGT_MAGIC */
