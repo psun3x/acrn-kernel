@@ -90,6 +90,7 @@ i915-y += \
 	  i915_vma.o \
 	  intel_breadcrumbs.o \
 	  intel_context.o \
+	  i915_gem_gvtbuffer.o \
 	  intel_engine_cs.o \
 	  intel_hangcheck.o \
 	  intel_lrc.o \
