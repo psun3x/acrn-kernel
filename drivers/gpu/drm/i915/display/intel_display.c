@@ -79,6 +79,10 @@
 #include "intel_sideband.h"
 #include "intel_sprite.h"
 
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+#include "gvt.h"
+#endif
+
 /* Primary plane formats for gen <= 3 */
 static const u32 i8xx_primary_formats[] = {
 	DRM_FORMAT_C8,
@@ -3886,6 +3890,12 @@ static void skl_detach_scaler(struct intel_crtc *intel_crtc, int id)
 {
 	struct drm_device *dev = intel_crtc->base.dev;
 	struct drm_i915_private *dev_priv = to_i915(dev);
+
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+	if (intel_gvt_active(dev_priv) &&
+		dev_priv->gvt->pipe_info[intel_crtc->pipe].scaler_owner[id] != 0)
+		return;
+#endif
 
 	I915_WRITE(SKL_PS_CTRL(intel_crtc->pipe, id), 0);
 	I915_WRITE(SKL_PS_WIN_POS(intel_crtc->pipe, id), 0);
@@ -14916,6 +14926,11 @@ static void intel_crtc_init_scalers(struct intel_crtc *crtc,
 		scaler->in_use = 0;
 		scaler->mode = 0;
 		scaler->owned = 1;
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+		if (intel_gvt_active(dev_priv) &&
+			dev_priv->gvt->pipe_info[crtc->pipe].scaler_owner[i] != 0)
+			scaler->owned = 0;
+#endif
 		if (intel_vgpu_active(dev_priv) &&
 			!(1 << (crtc->pipe * SKL_NUM_SCALERS + i) &
 			dev_priv->vgpu.scaler_owned))
