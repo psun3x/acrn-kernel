@@ -70,6 +70,10 @@
 #include "intel_sprite.h"
 #include "intel_tv.h"
 
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+#include "gvt.h"
+#endif
+
 /* Primary plane formats for gen <= 3 */
 static const u32 i8xx_primary_formats[] = {
 	DRM_FORMAT_C8,
@@ -14618,6 +14622,11 @@ static void intel_crtc_init_scalers(struct intel_crtc *crtc,
 		scaler->in_use = 0;
 		scaler->mode = 0;
 		scaler->owned = 1;
+#if IS_ENABLED(CONFIG_DRM_I915_GVT)
+		if (intel_gvt_active(dev_priv) &&
+		    dev_priv->gvt->pipe_info[crtc->pipe].scaler_owner[i] != 0)
+			scaler->owned = 0;
+#endif
 		if (intel_vgpu_active(dev_priv) &&
 			 !(1 << (crtc->pipe * SKL_NUM_SCALERS + i) &
 			  dev_priv->vgpu.scaler_owned))
