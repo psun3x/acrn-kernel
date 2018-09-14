@@ -3639,6 +3639,9 @@ i915_wedged_set(void *data, u64 val)
 {
 	struct drm_i915_private *i915 = data;
 
+	if (intel_vgpu_active(i915))
+		return -EINVAL;
+
 	/* Flush any previous reset before applying for a new one */
 	wait_event(i915->gpu_error.reset_queue,
 		   !test_bit(I915_RESET_BACKOFF, &i915->gpu_error.flags));
