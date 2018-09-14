@@ -1535,6 +1535,12 @@ gen8_cs_irq_handler(struct intel_engine_cs *engine, u32 iir)
 		tasklet |= intel_engine_needs_breadcrumb_tasklet(engine);
 	}
 
+	if ((iir & (GT_RENDER_CS_MASTER_ERROR_INTERRUPT)) &&
+			intel_vgpu_active(engine->i915)) {
+		queue_work(system_highpri_wq, &engine->reset_work);
+		return;
+	}
+
 	if (tasklet)
 		tasklet_hi_schedule(&engine->execlists.tasklet);
 }
@@ -1589,9 +1595,9 @@ static void gen8_gt_irq_handler(struct drm_i915_private *i915,
 
 	if (master_ctl & (GEN8_GT_VCS0_IRQ | GEN8_GT_VCS1_IRQ)) {
 		gen8_cs_irq_handler(i915->engine[VCS0],
-				    gt_iir[1] >> GEN8_VCS0_IRQ_SHIFT);
-		gen8_cs_irq_handler(i915->engine[VCS1],
 				    gt_iir[1] >> GEN8_VCS1_IRQ_SHIFT);
+		gen8_cs_irq_handler(i915->engine[VCS1],
+				    gt_iir[1] >> GEN8_VCS2_IRQ_SHIFT);
 	}
 
 	if (master_ctl & GEN8_GT_VECS_IRQ) {
@@ -4081,16 +4087,29 @@ static void gen8_gt_irq_postinstall(struct drm_i915_private *dev_priv)
 		 GT_RENDER_USER_INTERRUPT << GEN8_BCS_IRQ_SHIFT |
 		 GT_CONTEXT_SWITCH_INTERRUPT << GEN8_BCS_IRQ_SHIFT),
 
-		(GT_RENDER_USER_INTERRUPT << GEN8_VCS0_IRQ_SHIFT |
-		 GT_CONTEXT_SWITCH_INTERRUPT << GEN8_VCS0_IRQ_SHIFT |
-		 GT_RENDER_USER_INTERRUPT << GEN8_VCS1_IRQ_SHIFT |
-		 GT_CONTEXT_SWITCH_INTERRUPT << GEN8_VCS1_IRQ_SHIFT),
+		(GT_RENDER_USER_INTERRUPT << GEN8_VCS1_IRQ_SHIFT |
+		 GT_CONTEXT_SWITCH_INTERRUPT << GEN8_VCS1_IRQ_SHIFT |
+		 GT_RENDER_USER_INTERRUPT << GEN8_VCS2_IRQ_SHIFT |
+		 GT_CONTEXT_SWITCH_INTERRUPT << GEN8_VCS2_IRQ_SHIFT),
 
 		0,
 
 		(GT_RENDER_USER_INTERRUPT << GEN8_VECS_IRQ_SHIFT |
 		 GT_CONTEXT_SWITCH_INTERRUPT << GEN8_VECS_IRQ_SHIFT)
 	};
+
+	if (intel_vgpu_active(dev_priv)) {
+		gt_interrupts[0] |= GT_RENDER_CS_MASTER_ERROR_INTERRUPT <<
+				GEN8_RCS_IRQ_SHIFT |
+			GT_RENDER_CS_MASTER_ERROR_INTERRUPT <<
+				GEN8_BCS_IRQ_SHIFT;
+		gt_interrupts[1] |= GT_RENDER_CS_MASTER_ERROR_INTERRUPT <<
+				GEN8_VCS1_IRQ_SHIFT |
+			GT_RENDER_CS_MASTER_ERROR_INTERRUPT <<
+				GEN8_VCS2_IRQ_SHIFT;
+		gt_interrupts[3] |= GT_RENDER_CS_MASTER_ERROR_INTERRUPT <<
+				GEN8_VECS_IRQ_SHIFT;
+	}
 
 	dev_priv->pm_ier = 0x0;
 	dev_priv->pm_imr = ~dev_priv->pm_ier;

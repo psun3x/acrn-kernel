@@ -7314,8 +7314,8 @@ enum {
 
 #define GEN8_RCS_IRQ_SHIFT 0
 #define GEN8_BCS_IRQ_SHIFT 16
-#define GEN8_VCS0_IRQ_SHIFT 0  /* NB: VCS1 in bspec! */
-#define GEN8_VCS1_IRQ_SHIFT 16 /* NB: VCS2 in bpsec! */
+#define GEN8_VCS1_IRQ_SHIFT 0
+#define GEN8_VCS2_IRQ_SHIFT 16
 #define GEN8_VECS_IRQ_SHIFT 0
 #define GEN8_WD_IRQ_SHIFT 16
 
