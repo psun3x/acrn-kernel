@@ -505,11 +505,17 @@ icl_program_input_csc(struct intel_plane *plane,
 	I915_WRITE_FW(PLANE_INPUT_CSC_POSTOFF(pipe, plane_id, 2), 0x0);
 }
 
+/**
+ * pv_skl_program_plane() - pv_mmio version of skl_program_plane
+ *
+ * Only for pv_mmio feature of ACRN hypervisor, this is a mirror operation
+ * of skl_program_plane, must keep the same logic with it.
+ */
 static void
-skl_program_plane(struct intel_plane *plane,
-		  const struct intel_crtc_state *crtc_state,
-		  const struct intel_plane_state *plane_state,
-		  int color_plane, bool slave, u32 plane_ctl)
+pv_skl_program_plane(struct intel_plane *plane,
+		const struct intel_crtc_state *crtc_state,
+		const struct intel_plane_state *plane_state,
+		int color_plane, bool slave, u32 plane_ctl)
 {
 	struct drm_i915_private *dev_priv = to_i915(plane->base.dev);
 	enum plane_id plane_id = plane->id;
@@ -530,6 +536,129 @@ skl_program_plane(struct intel_plane *plane,
 	u32 plane_color_ctl = 0;
 	unsigned long irqflags;
 	u32 keymsk, keymax;
+	struct pv_plane_update tmp_plane;
+	u32 __iomem *pv_plane = (u32 *)&(dev_priv->shared_page->pv_plane);
+	int i;
+
+	memset(&tmp_plane, 0, sizeof(struct pv_plane_update));
+	plane_ctl |= skl_plane_ctl_crtc(crtc_state);
+
+	if (INTEL_GEN(dev_priv) >= 10 || IS_GEMINILAKE(dev_priv))
+		plane_color_ctl = plane_state->color_ctl |
+				glk_plane_color_ctl_crtc(crtc_state);
+
+	/* Sizes are 0 based */
+	src_w--;
+	src_h--;
+
+	keymax = (key->max_value & 0xffffff) | PLANE_KEYMAX_ALPHA(alpha);
+
+	keymsk = key->channel_mask & 0x7ffffff;
+	if (alpha < 0xff)
+		keymsk |= PLANE_KEYMSK_ALPHA_ENABLE;
+
+	/* The scaler will handle the output position */
+	if (plane_state->scaler_id >= 0) {
+		crtc_x = 0;
+		crtc_y = 0;
+	}
+
+	tmp_plane.plane_stride = stride;
+	tmp_plane.plane_pos = (crtc_y << 16) | crtc_x;
+	tmp_plane.plane_size = (src_h << 16) | src_w;
+	tmp_plane.plane_aux_dist =
+		(plane_state->color_plane[1].offset - surf_addr) | aux_stride;
+
+	if (icl_is_hdr_plane(dev_priv, plane_id)) {
+		u32 cus_ctl = 0;
+
+		if (linked) {
+			/* Enable and use MPEG-2 chroma siting */
+			cus_ctl = PLANE_CUS_ENABLE |
+				PLANE_CUS_HPHASE_0 |
+				PLANE_CUS_VPHASE_SIGN_NEGATIVE |
+				PLANE_CUS_VPHASE_0_25;
+
+			if (linked->id == PLANE_SPRITE5)
+				cus_ctl |= PLANE_CUS_PLANE_7;
+			else if (linked->id == PLANE_SPRITE4)
+				cus_ctl |= PLANE_CUS_PLANE_6;
+			else
+				MISSING_CASE(linked->id);
+		}
+
+		tmp_plane.cus_ctl = cus_ctl;
+	}
+
+	if (INTEL_GEN(dev_priv) >= 10 || IS_GEMINILAKE(dev_priv))
+		tmp_plane.plane_color_ctl = plane_color_ctl;
+
+	if (fb->format->is_yuv && icl_is_hdr_plane(dev_priv, plane_id))
+		icl_program_input_csc(plane, crtc_state, plane_state);
+
+	skl_write_plane_wm(plane, crtc_state);
+
+	tmp_plane.plane_key_val = key->min_value;
+	tmp_plane.plane_key_msk = keymsk;
+	tmp_plane.plane_key_max = keymax;
+
+	tmp_plane.plane_offset = (y << 16) | x;
+
+	if (INTEL_GEN(dev_priv) < 11)
+		tmp_plane.plane_aux_offset = (plane_state->color_plane[1].y << 16) |
+				plane_state->color_plane[1].x;
+
+	/*
+	 * The control register self-arms if the plane was previously
+	 * disabled. Try to make the plane enable atomic by writing
+	 * the control register just before the surface register.
+	 */
+	tmp_plane.plane_ctl = plane_ctl;
+
+	if (!slave && plane_state->scaler_id >= 0)
+		skl_program_scaler(plane, crtc_state, plane_state);
+
+	spin_lock(&dev_priv->shared_page_lock);
+	for (i = 0; i < sizeof(struct pv_plane_update) / 4; i++)
+		writel(*((u32 *)(&tmp_plane) + i), pv_plane + i);
+	I915_WRITE_FW(PLANE_SURF(pipe, plane_id),
+		intel_plane_ggtt_offset(plane_state) + surf_addr);
+	spin_unlock(&dev_priv->shared_page_lock);
+}
+
+static void
+skl_program_plane(struct intel_plane *plane,
+		  const struct intel_crtc_state *crtc_state,
+		  const struct intel_plane_state *plane_state,
+		  int color_plane, bool slave, u32 plane_ctl)
+{
+	struct drm_i915_private *dev_priv = to_i915(plane->base.dev);
+	enum plane_id plane_id = plane->id;
+	enum pipe pipe = plane->pipe;
+	const struct drm_intel_sprite_colorkey *key = &plane_state->ckey;
+	u32 surf_addr = plane_state->color_plane[color_plane].offset;
+	u32 stride = skl_plane_stride(plane_state, color_plane);
+	u32 aux_stride = skl_plane_stride(plane_state, 1);
+	int crtc_x = plane_state->base.dst.x1;
+	int crtc_y = plane_state->base.dst.y1;
+	u32 x = plane_state->color_plane[color_plane].x;
+	u32 y = plane_state->color_plane[color_plane].y;
+	u32 src_w = drm_rect_width(&plane_state->base.src) >> 16;
+	u32 src_h = drm_rect_height(&plane_state->base.src) >> 16;
+	u32 crtc_w = drm_rect_width(&plane_state->base.dst);
+	u32 crtc_h = drm_rect_height(&plane_state->base.dst);
+	struct intel_plane *linked = plane_state->linked_plane;
+	const struct drm_framebuffer *fb = plane_state->base.fb;
+	u8 alpha = plane_state->base.alpha >> 8;
+	u32 plane_color_ctl = 0;
+	unsigned long irqflags;
+	u32 keymsk, keymax;
+
+	if (PVMMIO_LEVEL(dev_priv, PVMMIO_PLANE_UPDATE)) {
+		pv_skl_program_plane(plane, crtc_state, plane_state, color_plane,
+			slave, plane_ctl);
+		return;
+	}
 
 	plane_ctl |= skl_plane_ctl_crtc(crtc_state);
 
@@ -546,6 +675,8 @@ skl_program_plane(struct intel_plane *plane,
 	/* Sizes are 0 based */
 	src_w--;
 	src_h--;
+	crtc_w--;
+	crtc_h--;
 
 	keymax = (key->max_value & 0xffffff) | PLANE_KEYMAX_ALPHA(alpha);
 
