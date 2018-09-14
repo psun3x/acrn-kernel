@@ -4377,6 +4377,7 @@ void __i915_gem_object_release_unless_active(struct drm_i915_gem_object *obj)
 
 void i915_gem_sanitize(struct drm_i915_private *i915)
 {
+	int err;
 	intel_wakeref_t wakeref;
 
 	GEM_TRACE("\n");
@@ -4401,7 +4402,12 @@ void i915_gem_sanitize(struct drm_i915_private *i915)
 	 * it may impact the display and we are uncertain about the stability
 	 * of the reset, so this could be applied to even earlier gen.
 	 */
-	intel_engines_sanitize(i915, false);
+	err = -ENODEV;
+	if (INTEL_GEN(i915) >= 5 && intel_has_gpu_reset(i915) &&
+		!intel_vgpu_active(i915))
+		err = WARN_ON(intel_gpu_reset(i915, ALL_ENGINES));
+	if (!err)
+		intel_engines_sanitize(i915, false);
 
 	intel_uncore_forcewake_put(&i915->uncore, FORCEWAKE_ALL);
 	intel_runtime_pm_put(i915, wakeref);
