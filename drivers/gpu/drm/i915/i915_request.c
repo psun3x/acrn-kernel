@@ -1148,6 +1148,7 @@ void i915_request_add(struct i915_request *request)
 	lockdep_unpin_lock(&request->timeline->mutex, request->cookie);
 
 	trace_i915_request_add(request);
+	trace_i915_request_add_domain(request);
 
 	/*
 	 * Make sure that no request gazumped us - if it was allocated after
