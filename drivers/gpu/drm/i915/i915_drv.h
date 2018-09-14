@@ -1242,6 +1242,7 @@ struct i915_frontbuffer_tracking {
 struct i915_virtual_gpu {
 	bool active;
 	u32 caps;
+	u32 scaler_owned;
 };
 
 /* used in computing the new watermarks state */

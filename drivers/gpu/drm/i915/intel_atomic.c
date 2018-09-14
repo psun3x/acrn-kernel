@@ -221,7 +221,8 @@ static void intel_atomic_setup_scaler(struct intel_crtc_scaler_state *scaler_sta
 	if (*scaler_id < 0) {
 		/* find a free scaler */
 		for (j = 0; j < intel_crtc->num_scalers; j++) {
-			if (scaler_state->scalers[j].in_use)
+			if (scaler_state->scalers[j].in_use &&
+				scaler_state->scalers[j].owned == 0)
 				continue;
 
 			*scaler_id = j;
@@ -262,10 +263,12 @@ static void intel_atomic_setup_scaler(struct intel_crtc_scaler_state *scaler_sta
 		 * scaler 0 operates in high quality (HQ) mode.
 		 * In this case use scaler 0 to take advantage of HQ mode
 		 */
-		scaler_state->scalers[*scaler_id].in_use = 0;
-		*scaler_id = 0;
-		scaler_state->scalers[0].in_use = 1;
-		mode = SKL_PS_SCALER_MODE_HQ;
+		if (scaler_state->scalers[0].owned == 1) {
+			scaler_state->scalers[*scaler_id].in_use = 0;
+			*scaler_id = 0;
+			scaler_state->scalers[0].in_use = 1;
+			mode = SKL_PS_SCALER_MODE_HQ;
+		}
 	} else {
 		mode = SKL_PS_SCALER_MODE_DYN;
 	}
