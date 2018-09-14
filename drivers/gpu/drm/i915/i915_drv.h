@@ -1343,6 +1343,7 @@ struct drm_i915_private {
 
 	struct gvt_shared_page *shared_page;
 	spinlock_t shared_page_lock;
+	spinlock_t pvmmio_gtt_lock;
 	spinlock_t pvmmio_ppgtt_lock;
 
 	struct intel_uncore uncore;
