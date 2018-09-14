@@ -41,6 +41,8 @@
 #define RING_CTX_OFF(x) \
 	offsetof(struct execlist_ring_context, x)
 
+bool gvt_shadow_wa_ctx = false;
+
 static void set_context_pdp_root_pointer(
 		struct execlist_ring_context *ring_context,
 		u32 pdp[8])
@@ -429,7 +431,9 @@ int intel_gvt_scan_and_shadow_workload(struct intel_vgpu_workload *workload)
 	if (ret)
 		goto err_unpin;
 
-	if (workload->ring_id == RCS0 && workload->wa_ctx.indirect_ctx.size) {
+	if (workload->ring_id == RCS0 
+		&& workload->wa_ctx.indirect_ctx.size
+		&& gvt_shadow_wa_ctx) {
 		ret = intel_gvt_scan_and_shadow_wa_ctx(&workload->wa_ctx);
 		if (ret)
 			goto err_shadow;
@@ -640,10 +644,12 @@ static int prepare_workload(struct intel_vgpu_workload *workload)
 		goto err_unpin_mm;
 	}
 
-	ret = prepare_shadow_wa_ctx(&workload->wa_ctx);
-	if (ret) {
-		gvt_vgpu_err("fail to prepare_shadow_wa_ctx\n");
-		goto err_shadow_batch;
+	if (gvt_shadow_wa_ctx) {
+		ret = prepare_shadow_wa_ctx(&workload->wa_ctx);
+		if (ret) {
+			gvt_vgpu_err("fail to prepare_shadow_wa_ctx\n");
+			goto err_shadow_batch;
+		}
 	}
 
 	if (workload->prepare) {
@@ -943,6 +949,12 @@ static void complete_current_workload(struct intel_gvt *gvt, int ring_id)
 	list_del_init(&workload->list);
 
 	if (workload->status || vgpu->resetting_eng & BIT(ring_id)) {
+		release_shadow_batch_buffer(workload);
+		if(gvt_shadow_wa_ctx)
+			release_shadow_wa_ctx(&workload->wa_ctx);
+	}
+
+	if (workload->status || (vgpu->resetting_eng & BIT(ring_id))) {
 		/* if workload->status is not successful means HW GPU
 		 * has occurred GPU hang or something wrong with i915/GVT,
 		 * and GVT won't inject context switch interrupt to guest.
