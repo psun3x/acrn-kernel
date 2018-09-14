@@ -454,6 +454,7 @@ struct intel_engine_cs {
 	void		(*destroy)(struct intel_engine_cs *engine);
 
 	struct intel_engine_execlists execlists;
+	struct work_struct reset_work;
 
 	/* status_notifier: list of callbacks for context-switch changes */
 	struct atomic_notifier_head context_status_notifier;
