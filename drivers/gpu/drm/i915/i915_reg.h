@@ -8012,6 +8012,13 @@ enum {
 #define   ICP_TC_HPD_LONG_DETECT(tc_port)	(2 << (tc_port) * 4)
 #define   ICP_TC_HPD_SHORT_DETECT(tc_port)	(1 << (tc_port) * 4)
 
+#define PCH_GMBUS0              _MMIO(0xc5100)
+#define PCH_GMBUS1              _MMIO(0xc5104)
+#define PCH_GMBUS2              _MMIO(0xc5108)
+#define PCH_GMBUS3              _MMIO(0xc510c)
+#define PCH_GMBUS4              _MMIO(0xc5110)
+#define PCH_GMBUS5              _MMIO(0xc5120)
+
 #define _PCH_DPLL_A              0xc6014
 #define _PCH_DPLL_B              0xc6018
 #define PCH_DPLL(pll) _MMIO((pll) == 0 ? _PCH_DPLL_A : _PCH_DPLL_B)
@@ -11413,5 +11420,32 @@ enum skl_power_gate {
 
 #define PORT_TX_DFLEXDPCSSS			_MMIO(FIA1_BASE + 0x00894)
 #define   DP_PHY_MODE_STATUS_NOT_SAFE(tc_port)		(1 << (tc_port))
+
+/* GVT has special read process from some MMIO register,
+ * which so that should be trapped to GVT to make a
+ * complete emulation. Such MMIO is not too much, now using
+ * a static list to cover them.
+ */
+static inline bool in_mmio_read_trap_list(u32 reg)
+{
+	if (unlikely(reg >= PCH_GMBUS0.reg && reg <= PCH_GMBUS5.reg))
+		return true;
+
+	if (unlikely(reg == RING_TIMESTAMP(RENDER_RING_BASE).reg ||
+		reg == RING_TIMESTAMP(BLT_RING_BASE).reg ||
+		reg == RING_TIMESTAMP(GEN6_BSD_RING_BASE).reg ||
+		reg == RING_TIMESTAMP(VEBOX_RING_BASE).reg ||
+		reg == RING_TIMESTAMP(GEN8_BSD2_RING_BASE).reg ||
+		reg == RING_TIMESTAMP_UDW(RENDER_RING_BASE).reg ||
+		reg == RING_TIMESTAMP_UDW(BLT_RING_BASE).reg ||
+		reg == RING_TIMESTAMP_UDW(GEN6_BSD_RING_BASE).reg ||
+		reg == RING_TIMESTAMP_UDW(VEBOX_RING_BASE).reg))
+		return true;
+
+	if (unlikely(reg == SBI_DATA.reg || reg == 0x6c060 || reg == 0x206c))
+		return true;
+
+	return false;
+}
 
 #endif /* _I915_REG_H_ */
