@@ -33,6 +33,10 @@
  *
  */
 #include <asm/hypervisor.h>
+#include <asm/acrnhyper.h>
+#include <asm/irq_vectors.h>
+#include <asm/irq_regs.h>
+#include <asm/desc.h>
 
 static uint32_t __init acrn_detect(void)
 {
@@ -41,6 +45,8 @@ static uint32_t __init acrn_detect(void)
 
 static void __init acrn_init_platform(void)
 {
+	alloc_intr_gate(HYPERVISOR_CALLBACK_VECTOR,
+                                acrn_hv_callback_vector);
 }
 
 static void acrn_pin_vcpu(int cpu)
@@ -59,6 +65,37 @@ static void __init acrn_init_mem_mapping(void)
 	/* do nothing here now */
 }
 
+
+static void (*acrn_intr_handler)(void);
+/*
+ * Handler for ACRN_HV_CALLBACK.
+ */
+__visible void acrn_hv_vector_handler(struct pt_regs *regs)
+{
+	struct pt_regs *old_regs = set_irq_regs(regs);
+
+	entering_ack_irq();
+#ifdef CONFIG_X86
+	inc_irq_stat(irq_hv_callback_count);
+#endif
+
+	if (acrn_intr_handler)
+		acrn_intr_handler();
+
+	exiting_irq();
+	set_irq_regs(old_regs);
+}
+
+void acrn_setup_intr_irq(void (*handler)(void))
+{
+	acrn_intr_handler = handler;
+}
+
+void acrn_remove_intr_irq(void)
+{
+	acrn_intr_handler = NULL;
+}
+
 const struct hypervisor_x86 x86_hyper_acrn = {
 	.name                   = "ACRN",
 	.detect                 = acrn_detect,
@@ -69,3 +106,5 @@ const struct hypervisor_x86 x86_hyper_acrn = {
 	.init.init_mem_mapping	= acrn_init_mem_mapping,
 };
 EXPORT_SYMBOL(x86_hyper_acrn);
+EXPORT_SYMBOL(acrn_setup_intr_irq);
+EXPORT_SYMBOL(acrn_remove_intr_irq);
