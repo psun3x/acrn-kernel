@@ -45,6 +45,9 @@
 
 /**
  * intel_gvt_hypervisor_host_init - init GVT-g host side
+ * @dev: i915 device
+ * @gvt: GVT device
+ * @ops: intel_gvt_ops interface
  *
  * Returns:
  * Zero on success, negative error code if failed
@@ -60,6 +63,8 @@ static inline int intel_gvt_hypervisor_host_init(struct device *dev,
 
 /**
  * intel_gvt_hypervisor_host_exit - exit GVT-g host side
+ * @dev: i915 device
+ * @gvt: GVT device
  */
 static inline void intel_gvt_hypervisor_host_exit(struct device *dev)
 {
@@ -73,6 +78,7 @@ static inline void intel_gvt_hypervisor_host_exit(struct device *dev)
 /**
  * intel_gvt_hypervisor_attach_vgpu - call hypervisor to initialize vGPU
  * related stuffs inside hypervisor.
+ * @vgpu: a vGPU
  *
  * Returns:
  * Zero on success, negative error code if failed.
@@ -89,6 +95,7 @@ static inline int intel_gvt_hypervisor_attach_vgpu(struct intel_vgpu *vgpu)
 /**
  * intel_gvt_hypervisor_detach_vgpu - call hypervisor to release vGPU
  * related stuffs inside hypervisor.
+ * @vgpu: a vGPU
  *
  * Returns:
  * Zero on success, negative error code if failed.
@@ -109,6 +116,7 @@ static inline void intel_gvt_hypervisor_detach_vgpu(struct intel_vgpu *vgpu)
 
 /**
  * intel_gvt_hypervisor_inject_msi - inject a MSI interrupt into vGPU
+ * @vgpu: a vGPU
  *
  * Returns:
  * Zero on success, negative error code if failed.
@@ -140,7 +148,7 @@ static inline int intel_gvt_hypervisor_inject_msi(struct intel_vgpu *vgpu)
 }
 
 /**
- * intel_gvt_hypervisor_set_wp_page - translate a host VA into MFN
+ * intel_gvt_hypervisor_virt_to_mfn - translate a host VA into MFN
  * @p: host kernel virtual address
  *
  * Returns:
@@ -214,7 +222,7 @@ static inline int intel_gvt_hypervisor_write_gpa(struct intel_vgpu *vgpu,
 /**
  * intel_gvt_hypervisor_gfn_to_mfn - translate a GFN to MFN
  * @vgpu: a vGPU
- * @gpfn: guest pfn
+ * @gfn: guest pfn
  *
  * Returns:
  * MFN on success, INTEL_GVT_INVALID_ADDR if failed.
