@@ -206,6 +206,10 @@ i915_param_named(enable_pvmmio, uint, 0400,
 i915_param_named(enable_conformance_check, bool, 0400,
 	"To toggle the GVT guest conformance feature(default:true)");
 
+i915_param_named(gvt_workload_priority, int, 0600,
+		"Set GVT-g workload priority, (range: (-1023, 1023), default: 0, "
+		"more positive value means higher priority).");
+
 static __always_inline void _print_param(struct drm_printer *p,
 					 const char *name,
 					 const char *type,
