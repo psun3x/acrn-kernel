@@ -237,7 +237,7 @@ out:
 /**
  * intel_vgpu_reset_mmio - reset virtual MMIO space
  * @vgpu: a vGPU
- * @dmlr: whether this is device model level reset
+ * @dmlr: vGPU Device Model Level Reset or GT Reset
  */
 void intel_vgpu_reset_mmio(struct intel_vgpu *vgpu, bool dmlr)
 {
