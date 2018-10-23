@@ -128,7 +128,6 @@ i915-y += \
 	  i915_timeline.o \
 	  i915_trace_points.o \
 	  i915_vma.o \
-	  i915_gem_gvtbuffer.o \
 	  intel_wopcm.o
 
 # general-purpose microcontroller (GuC) support
@@ -243,7 +242,7 @@ i915-y += i915_perf.o \
 	  i915_oa_icl.o
 
 ifeq ($(CONFIG_DRM_I915_GVT),y)
-i915-y += intel_gvt.o
+i915-y += intel_gvt.o i915_gem_gvtbuffer.o
 include $(src)/gvt/Makefile
 endif
 
