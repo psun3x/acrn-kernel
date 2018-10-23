@@ -196,9 +196,9 @@ DEFINE_SIMPLE_ATTRIBUTE(vgpu_scan_nonprivbb_fops,
 int intel_gvt_debugfs_add_vgpu(struct intel_vgpu *vgpu)
 {
 	struct dentry *ent;
-	char name[16] = "";
+	char name[10];
 
-	snprintf(name, 16, "vgpu%d", vgpu->id);
+	snprintf(name, sizeof(name), "vgpu%d", vgpu->id);
 	vgpu->debugfs = debugfs_create_dir(name, vgpu->gvt->debugfs_root);
 	if (!vgpu->debugfs)
 		return -ENOMEM;
