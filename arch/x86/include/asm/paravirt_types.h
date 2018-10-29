@@ -59,7 +59,7 @@ struct vm_area_struct;
 
 struct msi_desc;
 struct msi_msg;
- 
+
 /*
  * Wrapper type for pointers to code which uses the non-standard
  * calling convention.  See PV_CALL_SAVE_REGS_THUNK below.
