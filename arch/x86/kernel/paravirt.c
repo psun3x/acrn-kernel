@@ -13,7 +13,6 @@
 #include <linux/bcd.h>
 #include <linux/highmem.h>
 #include <linux/kprobes.h>
-#include <linux/msi.h>
 
 #include <asm/bug.h>
 #include <asm/paravirt.h>

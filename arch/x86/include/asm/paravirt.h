@@ -785,18 +785,6 @@ static inline notrace unsigned long arch_local_irq_save(void)
 	arch_local_irq_disable();
 	return f;
 }
-
-#ifdef CONFIG_PCI_MSI
-static inline void write_msi_msg_paravirt(struct msi_desc *entry,
-					struct msi_msg *msg)
-{
-	if ((pv_ops.irq.write_msi == NULL) ||
-		(pv_ops.irq.write_msi == paravirt_nop))
-		return;
-
-	return PVOP_VCALL2(pv_ops.irq.write_msi, entry, msg);
-}
-#endif
 #endif
 
 /* Make sure as little as possible of this mess escapes. */
