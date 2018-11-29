@@ -51,6 +51,7 @@
  *
  */
 
+#include <linux/bitops.h>
 #include <linux/slab.h>
 #include <linux/wait.h>
 #include <linux/freezer.h>
@@ -72,6 +73,11 @@ struct ioreq_range {
 	long end;
 };
 
+enum IOREQ_CLIENT_BITS {
+        IOREQ_CLIENT_DESTROYING = 0,
+        IOREQ_CLIENT_EXIT,
+};
+
 struct ioreq_client {
 	/* client name */
 	char name[16];
@@ -91,8 +97,7 @@ struct ioreq_client {
 	 */
 	bool fallback;
 
-	volatile bool destroying;
-	volatile bool kthread_exit;
+	unsigned long flags;
 
 	/* client covered io ranges - N/A for fallback client */
 	struct list_head range_list;
@@ -157,6 +162,7 @@ static int alloc_client(void)
 	if (!client)
 		return -ENOMEM;
 	client->id = i;
+	set_bit(IOREQ_CLIENT_EXIT, &client->flags);
 	clients[i] = client;
 
 	return i;
@@ -312,13 +318,10 @@ static void acrn_ioreq_destroy_client_pervm(struct ioreq_client *client,
 	struct list_head *pos, *tmp;
 	unsigned long flags;
 
-	client->destroying = true;
+	set_bit(IOREQ_CLIENT_DESTROYING, &client->flags);
 	acrn_ioreq_notify_client(client);
 
-	/* the client thread will mark kthread_exit flag as true before exit,
-	 * so wait for it exited.
-	 */
-	while (!client->kthread_exit)
+	while (client->vhm_create_kthread && !test_bit(IOREQ_CLIENT_EXIT, &client->flags))
 		msleep(10);
 
 	spin_lock_irqsave(&client->range_lock, flags);
@@ -481,7 +484,7 @@ EXPORT_SYMBOL_GPL(acrn_ioreq_del_iorange);
 static inline bool is_destroying(struct ioreq_client *client)
 {
 	if (client)
-		return client->destroying;
+		return test_bit(IOREQ_CLIENT_DESTROYING, &client->flags);
 	else
 		return true;
 }
@@ -545,9 +548,7 @@ static int ioreq_client_thread(void *data)
 				is_destroying(client)));
 	}
 
-	/* the client thread such as for hyper-dma will exit from here,
-	 * so mark kthread_exit as true before exit */
-	client->kthread_exit = true;
+	set_bit(IOREQ_CLIENT_EXIT, &client->flags);
 
 	return 0;
 }
@@ -581,7 +582,9 @@ int acrn_ioreq_attach_client(int client_id, bool check_kthread_stop)
 					"for client %s\n", client->name);
 			return -ENOMEM;
 		}
+		clear_bit(IOREQ_CLIENT_EXIT, &client->flags);
 	} else {
+		clear_bit(IOREQ_CLIENT_EXIT, &client->flags);
 		might_sleep();
 
 		if (check_kthread_stop) {
@@ -590,7 +593,7 @@ int acrn_ioreq_attach_client(int client_id, bool check_kthread_stop)
 				has_pending_request(client) ||
 				is_destroying(client)));
 			if (kthread_should_stop())
-				client->kthread_exit = true;
+				set_bit(IOREQ_CLIENT_EXIT, &client->flags);
 		} else {
 			wait_event_freezable(client->wq,
 				(has_pending_request(client) ||
@@ -598,9 +601,7 @@ int acrn_ioreq_attach_client(int client_id, bool check_kthread_stop)
 		}
 
 		if (is_destroying(client)) {
-			/* the client thread for vcpu will exit from here,
-			 * so mark kthread_exit as true before exit */
-			client->kthread_exit = true;
+			set_bit(IOREQ_CLIENT_EXIT, &client->flags);
 			return 1;
 		}
 	}
