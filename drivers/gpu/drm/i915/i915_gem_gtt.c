@@ -951,10 +951,12 @@ static void gen8_ppgtt_clear_4lvl(struct i915_address_space *vm,
 		struct pv_ppgtt_update *pv_ppgtt =
 					&dev_priv->shared_page->pv_ppgtt;
 
+		spin_lock(&dev_priv->pvmmio_ppgtt_lock);
 		writeq(px_dma(pml4), &pv_ppgtt->pdp);
 		writeq(orig_start, &pv_ppgtt->start);
 		writeq(orig_length, &pv_ppgtt->length);
 		I915_WRITE(vgtif_reg(g2v_notify), VGT_G2V_PPGTT_L4_CLEAR);
+		spin_unlock(&dev_priv->pvmmio_ppgtt_lock);
 	}
 }
 
@@ -1200,11 +1202,13 @@ static void gen8_ppgtt_insert_4lvl(struct i915_address_space *vm,
 			struct pv_ppgtt_update *pv_ppgtt =
 				&dev_priv->shared_page->pv_ppgtt;
 
+			spin_lock(&dev_priv->pvmmio_ppgtt_lock);
 			writeq(px_dma(&ppgtt->pml4), &pv_ppgtt->pdp);
 			writeq(vma->node.start, &pv_ppgtt->start);
 			writeq(vma->node.size, &pv_ppgtt->length);
 			writel(cache_level, &pv_ppgtt->cache_level);
 			I915_WRITE(vgtif_reg(g2v_notify), VGT_G2V_PPGTT_L4_INSERT);
+			spin_unlock(&dev_priv->pvmmio_ppgtt_lock);
 		}
 
 		vma->page_sizes.gtt = I915_GTT_PAGE_SIZE;
@@ -1501,10 +1505,12 @@ static int gen8_ppgtt_alloc_4lvl(struct i915_address_space *vm,
 		struct pv_ppgtt_update *pv_ppgtt =
 					&dev_priv->shared_page->pv_ppgtt;
 
+		spin_lock(&dev_priv->pvmmio_ppgtt_lock);
 		writeq(px_dma(pml4), &pv_ppgtt->pdp);
 		writeq(orig_start, &pv_ppgtt->start);
 		writeq(orig_length, &pv_ppgtt->length);
 		I915_WRITE(vgtif_reg(g2v_notify), VGT_G2V_PPGTT_L4_ALLOC);
+		spin_unlock(&dev_priv->pvmmio_ppgtt_lock);
 	}
 
 	return 0;
@@ -2299,10 +2305,12 @@ static void vgpu_ggtt_insert(struct drm_i915_private *dev_priv,
 {
 	struct gvt_shared_page *shared_page = dev_priv->shared_page;
 
+	spin_lock(&dev_priv->pvmmio_gtt_lock);
 	writeq(start, &shared_page->pv_ggtt.start);
 	writeq(num_entries, &shared_page->pv_ggtt.length);
 	writel(level, &shared_page->pv_ggtt.cache_level);
 	I915_WRITE(vgtif_reg(g2v_notify), VGT_G2V_GGTT_INSERT);
+	spin_unlock(&dev_priv->pvmmio_gtt_lock);
 }
 
 static void gen8_ggtt_insert_page(struct i915_address_space *vm,
@@ -2437,9 +2445,11 @@ static void gen8_ggtt_clear_range(struct i915_address_space *vm,
 		struct drm_i915_private *dev_priv = vm->i915;
 		struct gvt_shared_page *shared_page = dev_priv->shared_page;
 
+		spin_lock(&dev_priv->pvmmio_gtt_lock);
 		writeq(start, &shared_page->pv_ggtt.start);
 		writeq(length, &shared_page->pv_ggtt.length);
 		I915_WRITE(vgtif_reg(g2v_notify), VGT_G2V_GGTT_CLEAR);
+		spin_unlock(&dev_priv->pvmmio_gtt_lock);
 	}
 
 }
