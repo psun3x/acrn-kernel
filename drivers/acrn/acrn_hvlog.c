@@ -347,7 +347,7 @@ static void deinit_hvlog_dev(uint32_t hvlog_type)
 static int __init acrn_hvlog_init(void)
 {
 	int idx, ret = 0;
-	struct acrn_hw_info hw_info;
+	static struct acrn_hw_info hw_info;
 	uint64_t cur_logbuf, last_logbuf;
 
 	if (x86_hyper_type != X86_HYPER_ACRN) {
