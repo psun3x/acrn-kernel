@@ -1133,6 +1133,34 @@ static void queue_request(struct intel_engine_cs *engine,
 	list_add_tail(&node->link, i915_sched_lookup_priolist(engine, prio));
 }
 
+static void __update_queue(struct intel_engine_cs *engine,
+			  int prio, unsigned int timeout)
+{
+	struct intel_engine_execlists * const execlists = &engine->execlists;
+
+	GEM_TRACE("%s prio=%d (previous=%d)\n",
+		  engine->name, prio, execlists->queue_priority);
+
+	if (unlikely(execlists_is_active(execlists,
+					 EXECLISTS_ACTIVE_PREEMPT_TIMEOUT)))
+		hrtimer_cancel(&execlists->preempt_timer);
+
+	/* Set a timer to force preemption vs hostile userspace */
+	if (timeout &&
+	    !intel_vgpu_active(engine->i915) &&
+	    __execlists_need_preempt(prio, execlists->queue_priority_hint)) {
+		GEM_TRACE("%s preempt timeout=%uns\n", engine->name, timeout);
+
+		execlists_set_active(execlists,
+				     EXECLISTS_ACTIVE_PREEMPT_TIMEOUT);
+		hrtimer_start(&execlists->preempt_timer,
+			      ns_to_ktime(timeout),
+			      HRTIMER_MODE_REL);
+	}
+
+	engine->execlists.queue_priority_hint = prio;
+}
+
 static void __submit_queue_imm(struct intel_engine_cs *engine)
 {
 	struct intel_engine_execlists * const execlists = &engine->execlists;
