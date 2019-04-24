@@ -52,6 +52,7 @@
 
 #define GVT_MAX_VGPU 8
 
+#define GVT_CURSOR_BLOCKS 8
 struct intel_gvt_host {
 	struct device *dev;
 	bool initialized;
