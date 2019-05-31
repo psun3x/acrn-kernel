@@ -602,10 +602,12 @@ static void get_host_mmio_snapshot(struct intel_gvt *gvt)
 {
 	struct drm_i915_private *dev_priv = gvt->dev_priv;
 	struct engine_mmio *mmio, *mmio_list;
+	struct intel_uncore *uncore = &dev_priv->uncore;
 
 	mmio_list = gvt->engine_mmio_list.mmio;
 
 	if (!gvt->mmio.host_cache_initialized) {
+		intel_uncore_forcewake_get(uncore, FORCEWAKE_ALL);
 		/* Snapshot all the non-context MMIOs */
 		for (mmio = mmio_list; i915_mmio_reg_valid(mmio->reg); mmio++) {
 			if (mmio->in_context)
@@ -617,6 +619,7 @@ static void get_host_mmio_snapshot(struct intel_gvt *gvt)
 				gvt_host_reg(gvt, mmio->reg.reg) &= mmio->mask;
 		}
 		gvt->mmio.host_cache_initialized = true;
+		intel_uncore_forcewake_put(uncore, FORCEWAKE_ALL);
 	}
 }
 
