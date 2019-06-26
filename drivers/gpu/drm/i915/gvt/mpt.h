@@ -409,21 +409,4 @@ static inline bool intel_gvt_hypervisor_is_valid_gfn(
 int intel_gvt_register_hypervisor(struct intel_gvt_mpt *);
 void intel_gvt_unregister_hypervisor(void);
 
-/**
- * intel_gvt_hypervisor_dom0_ready - Signal Dom 0 is ready for Dom U
- *
- * It's to raise a uevent to notify Dom 0 is ready to start a Dom U, so that
- * Dom U can be started as early as possible
- *
- * Returns:
- * Zero on success, negative error code if failed
- */
-static inline int intel_gvt_hypervisor_dom0_ready(void)
-{
-	if (!intel_gvt_host.mpt->dom0_ready)
-		return 0;
-
-	return intel_gvt_host.mpt->dom0_ready();
-}
-
 #endif /* _GVT_MPT_H_ */
