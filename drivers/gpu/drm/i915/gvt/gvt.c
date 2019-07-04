@@ -306,8 +306,6 @@ void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
 				(plane * (pipe_size - 8) / plane_cnt);
 			pipe_info[pipe].plane_ddb_y[plane].end =
 				pipe_info[pipe].plane_ddb_y[plane].start + plane_size;
-
-
 		}
 	}
 }
