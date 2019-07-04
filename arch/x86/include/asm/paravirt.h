@@ -787,7 +787,6 @@ static inline notrace unsigned long arch_local_irq_save(void)
 }
 #endif
 
-
 /* Make sure as little as possible of this mess escapes. */
 #undef PARAVIRT_CALL
 #undef __PVOP_CALL

@@ -33,6 +33,10 @@
  *
  */
 #include <asm/hypervisor.h>
+#include <asm/acrnhyper.h>
+#include <asm/irq_vectors.h>
+#include <asm/irq_regs.h>
+#include <asm/desc.h>
 
 static uint32_t __init acrn_detect(void)
 {
@@ -41,6 +45,8 @@ static uint32_t __init acrn_detect(void)
 
 static void __init acrn_init_platform(void)
 {
+	alloc_intr_gate(HYPERVISOR_CALLBACK_VECTOR,
+                                acrn_hv_callback_vector);
 }
 
 static void acrn_pin_vcpu(int cpu)

@@ -204,6 +204,7 @@ struct pv_irq_ops {
 	void (*safe_halt)(void);
 	void (*halt)(void);
 #endif
+
 } __no_randomize_layout;
 
 struct pv_mmu_ops {

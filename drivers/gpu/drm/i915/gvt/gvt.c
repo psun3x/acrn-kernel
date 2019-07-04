@@ -306,8 +306,6 @@ void intel_gvt_allocate_ddb(struct intel_gvt *gvt,
 				(plane * (pipe_size - 8) / plane_cnt);
 			pipe_info[pipe].plane_ddb_y[plane].end =
 				pipe_info[pipe].plane_ddb_y[plane].start + plane_size;
-
-
 		}
 	}
 }
@@ -538,7 +536,8 @@ intel_gvt_register_hypervisor(struct intel_gvt_mpt *m)
 		return -ENODEV;
 
 	if (m->type != INTEL_GVT_HYPERVISOR_KVM &&
-	    m->type != INTEL_GVT_HYPERVISOR_XEN)
+	    m->type != INTEL_GVT_HYPERVISOR_XEN &&
+	    m->type != INTEL_GVT_HYPERVISOR_ACRN)
 		return -EINVAL;
 
 	/* Get a reference for device model module */

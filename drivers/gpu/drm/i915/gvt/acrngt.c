@@ -436,6 +436,13 @@ static int acrngt_sysfs_add_instance(struct acrngt_hvm_params *vp)
 	struct acrngt_hvm_dev *info;
 
 	struct intel_vgpu_type type = acrngt_priv.gvt->types[0];
+
+	/* todo: wa patch due to plane restriction patches are not porting */
+	acrngt_priv.gvt->pipe_info[1].plane_owner[0] = 1;
+	acrngt_priv.gvt->pipe_info[1].plane_owner[1] = 1;
+	acrngt_priv.gvt->pipe_info[1].plane_owner[2] = 1;
+	acrngt_priv.gvt->pipe_info[1].plane_owner[3] = 1;
+
 	type.low_gm_size = vp->aperture_sz * VMEM_1MB;
 	type.high_gm_size = (vp->gm_sz - vp->aperture_sz) * VMEM_1MB;
 	type.fence = vp->fence_sz;
@@ -801,7 +808,7 @@ static unsigned long acrngt_gfn_to_pfn(unsigned long handle, unsigned long gfn)
 		void *va = NULL;
 
 		va = map_guest_phys(info->vm_id, gfn << PAGE_SHIFT,
-				    1 << PAGE_SHIFT);
+				1 << PAGE_SHIFT);
 		if (!va) {
 			gvt_err("GVT: can not map gfn = 0x%lx!!!\n", gfn);
 			hpa = vhm_vm_gpa2hpa(info->vm_id, gfn << PAGE_SHIFT);
@@ -1013,8 +1020,8 @@ static int acrngt_set_opregion(void *p_vgpu)
 	return 0;
 }
 
-struct intel_gvt_mpt acrn_gvt_mpt = {
-	//.detect_host = acrngt_detect_host,
+static struct intel_gvt_mpt acrn_gvt_mpt = {
+	.type = INTEL_GVT_HYPERVISOR_ACRN,
 	.host_init = acrngt_host_init,
 	.host_exit = acrngt_host_exit,
 	.attach_vgpu = acrngt_attach_vgpu,

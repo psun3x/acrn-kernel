@@ -357,6 +357,10 @@ struct paravirt_patch_template pv_ops = {
 	.irq.irq_enable		= __PV_IS_CALLEE_SAVE(native_irq_enable),
 	.irq.safe_halt		= native_safe_halt,
 	.irq.halt		= native_halt,
+#ifdef CONFIG_PCI_MSI
+	.irq.write_msi		= native_write_msi_msg,
+#endif
+
 #endif /* CONFIG_PARAVIRT_XXL */
 
 	/* Mmu ops. */
