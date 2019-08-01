@@ -255,9 +255,11 @@ void vp_del_vqs(struct virtio_device *vdev)
 	for (i = 0; i < vp_dev->msix_used_vectors; ++i)
 		free_irq(pci_irq_vector(vp_dev->pci_dev, i), vp_dev);
 
-	for (i = 0; i < vp_dev->msix_vectors; i++)
-		if (vp_dev->msix_affinity_masks[i])
-			free_cpumask_var(vp_dev->msix_affinity_masks[i]);
+	if (vp_dev->msix_affinity_masks) {
+		for (i = 0; i < vp_dev->msix_vectors; i++)
+			if (vp_dev->msix_affinity_masks[i])
+				free_cpumask_var(vp_dev->msix_affinity_masks[i]);
+	}
 
 	if (vp_dev->msix_enabled) {
 		/* Disable the vector used for configuration */
@@ -526,6 +528,8 @@ static const struct pci_device_id virtio_pci_id_table[] = {
 #define ACRN_VIRTIO_DEVICE_ID_GPIO 0x8609
 	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, ACRN_VIRTIO_DEVICE_ID_GPIO) },
 
+#define ACRN_VIRTIO_DEVICE_ID_I2C 0x860A
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, ACRN_VIRTIO_DEVICE_ID_I2C) },
 #endif /* CONFIG_ACRN_VIRTIO_DEVICES */
 	{ 0 }
 };

@@ -32,7 +32,7 @@
  * macros. Do **not** mass change existing definitions just to update the style.
  *
  * Layout
- * ''''''
+ * ~~~~~~
  *
  * Keep helper macros near the top. For example, _PIPE() and friends.
  *
@@ -78,7 +78,7 @@
  * style. Use lower case in hexadecimal values.
  *
  * Naming
- * ''''''
+ * ~~~~~~
  *
  * Try to name registers according to the specs. If the register name changes in
  * the specs from platform to another, stick to the original name.
@@ -96,7 +96,7 @@
  * suffix to the name. For example, ``_SKL`` or ``_GEN8``.
  *
  * Examples
- * ''''''''
+ * ~~~~~~~~
  *
  * (Note that the values in the example are indented using spaces instead of
  * TABs to avoid misalignment in generated documentation. Use TABs in the
@@ -8367,6 +8367,9 @@ enum {
 
 #define  HSW_IDICR				_MMIO(0x9008)
 #define    IDIHASHMSK(x)			(((x) & 0x3f) << 16)
+#define    IDI_QOS_MASK                         (3 << 22)
+#define    IDI_QOS_SHIFT			22
+
 #define  HSW_EDRAM_CAP				_MMIO(0x120010)
 #define    EDRAM_ENABLED			0x1
 #define    EDRAM_NUM_BANKS(cap)			(((cap) >> 1) & 0xf)
