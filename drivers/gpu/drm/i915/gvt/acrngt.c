@@ -854,7 +854,7 @@ static int acrngt_map_gfn_to_mfn(unsigned long handle, unsigned long gfn,
 	if (map)
 		ret = add_memory_region(info->vm_id, gfn << PAGE_SHIFT,
 					mfn << PAGE_SHIFT, nr << PAGE_SHIFT,
-					MEM_TYPE_UC, MEM_ACCESS_RWX);
+					MEM_TYPE_UC, MEM_ACCESS_RWX, 0);
 	else
 		ret = del_memory_region(info->vm_id, gfn << PAGE_SHIFT,
 					nr << PAGE_SHIFT);

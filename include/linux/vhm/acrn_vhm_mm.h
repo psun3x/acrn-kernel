@@ -121,7 +121,7 @@ int unmap_guest_phys(unsigned long vmid, u64 uos_phys);
  */
 int add_memory_region(unsigned long vmid, unsigned long gpa,
 	unsigned long host_gpa, unsigned long size,
-	unsigned int mem_type, unsigned int mem_access_right);
+	unsigned int mem_type, unsigned int mem_access_right, unsigned long rsv_gpa);
 
 /**
  * del_memory_region - delete a guest memory region

@@ -71,6 +71,7 @@ static int set_memory_region(unsigned long vmid,
 	regions->vmid = vmid;
 	regions->mr_num = 1;
 	regions->regions_gpa = virt_to_phys(region);
+	//regions->regions_rsv_gpa = region->rsv_gpa;
 
 	if (set_memory_regions(regions) < 0) {
 		acrn_mempool_free(regions);
@@ -83,7 +84,7 @@ static int set_memory_region(unsigned long vmid,
 
 int add_memory_region(unsigned long vmid, unsigned long gpa,
 	unsigned long host_gpa, unsigned long size,
-	unsigned int mem_type, unsigned mem_access_right)
+	unsigned int mem_type, unsigned mem_access_right, unsigned long rsv_gpa)
 {
 	struct vm_memory_region *region;
 	int ret;
@@ -95,6 +96,7 @@ int add_memory_region(unsigned long vmid, unsigned long gpa,
 	region->size = size;
 	region->prot = ((mem_type & MEM_TYPE_MASK) |
 			(mem_access_right & MEM_ACCESS_RIGHT_MASK));
+	//region->rsv_gpa = rsv_gpa;
 	ret = set_memory_region(vmid, region);
 	acrn_mempool_free(region);
 	return ret;
@@ -176,7 +178,7 @@ int map_guest_memseg(struct vhm_vm *vm, struct vm_memmap *memmap)
 
 	if (add_memory_region(vm->vmid, memmap->gpa,
 			acrn_hpa2gpa(memmap->hpa), memmap->len,
-			MEM_TYPE_UC, memmap->prot) < 0){
+			MEM_TYPE_UC, memmap->prot, memmap->rsv_gpa) < 0) {
 		pr_err("vhm: failed to set memory region %ld!\n", vm->vmid);
 		return -EFAULT;
 	}
