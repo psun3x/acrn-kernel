@@ -1459,12 +1459,69 @@ static ssize_t reset_store(struct device *dev, struct device_attribute *attr,
 
 static struct device_attribute reset_attr = __ATTR(reset, 0200, NULL, reset_store);
 
+static ssize_t reset_test_store(struct device *dev, struct device_attribute *attr,
+			   const char *buf, size_t count)
+{
+	struct pci_dev *pdev = to_pci_dev(dev);
+	unsigned long val;
+	ssize_t result = kstrtoul(buf, 0, &val);
+	int config;
+	int rc = 0;
+
+	if (result < 0)
+		return result;
+
+	if (sscanf(buf, "%d", &config) != 1 || config < -1 || config > 5)
+		return -EINVAL;
+
+	pm_runtime_get_sync(dev);
+	switch (config) {
+	case 0:
+		rc = pci_dev_specific_reset(pdev, 0);
+		printk("%s: pci_dev_specific_reset = %d\n", __func__, rc);
+		break;
+	case 1:
+		if (pcie_has_flr(pdev)) {
+			rc = pcie_flr(pdev);
+			printk("%s: pcie_flr = %d\n", __func__, rc);
+		}
+		break;
+	case 2:
+		rc = pci_af_flr(pdev, 0);
+		printk("%s: pci_af_flr = %d\n", __func__, rc);
+		break;
+	case 3:
+		rc = pci_pm_reset(pdev, 0);
+		printk("%s: pci_pm_reset = %d\n", __func__, rc);
+		break;
+	case 4:
+		rc = pci_dev_reset_slot_function(pdev, 0);
+		printk("%s: pci_dev_reset_slot_function = %d\n", __func__, rc);
+		break;
+	case 5:
+		pci_parent_bus_reset(pdev, 0);
+		printk("%s: pci_parent_bus_reset = %d\n", __func__, rc);
+		break;
+	default:
+		return -EINVAL;
+	}
+	pm_runtime_put(dev);
+	if (rc < 0)
+		return result;
+
+	return count;
+}
+
+static struct device_attribute reset_test_attr = __ATTR(reset_test, 0200, NULL, reset_test_store);
+
 static int pci_create_capabilities_sysfs(struct pci_dev *dev)
 {
 	int retval;
 
 	pcie_vpd_create_sysfs_dev_files(dev);
 	pcie_aspm_create_sysfs_dev_files(dev);
+
+	retval = device_create_file(&dev->dev, &reset_test_attr);
 
 	if (dev->reset_fn) {
 		retval = device_create_file(&dev->dev, &reset_attr);

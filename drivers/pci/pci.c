@@ -4363,7 +4363,8 @@ static int pci_dev_wait(struct pci_dev *dev, char *reset_type, int timeout)
 		if (delay > timeout) {
 			pci_warn(dev, "not ready %dms after %s; giving up\n",
 				 delay - 1, reset_type);
-			return -ENOTTY;
+			//return -ENOTTY;
+			return -4;
 		}
 
 		if (delay > 1000)
@@ -4427,21 +4428,24 @@ int pcie_flr(struct pci_dev *dev)
 }
 EXPORT_SYMBOL_GPL(pcie_flr);
 
-static int pci_af_flr(struct pci_dev *dev, int probe)
+int pci_af_flr(struct pci_dev *dev, int probe)
 {
 	int pos;
 	u8 cap;
 
 	pos = pci_find_capability(dev, PCI_CAP_ID_AF);
 	if (!pos)
-		return -ENOTTY;
+		//return -ENOTTY;
+		return -1;
 
 	if (dev->dev_flags & PCI_DEV_FLAGS_NO_FLR_RESET)
-		return -ENOTTY;
+		//return -ENOTTY;
+		return -2;
 
 	pci_read_config_byte(dev, pos + PCI_AF_CAP, &cap);
 	if (!(cap & PCI_AF_CAP_TP) || !(cap & PCI_AF_CAP_FLR))
-		return -ENOTTY;
+		//return -ENOTTY;
+		return -3;
 
 	if (probe)
 		return 0;
@@ -4467,6 +4471,7 @@ static int pci_af_flr(struct pci_dev *dev, int probe)
 
 	return pci_dev_wait(dev, "AF_FLR", PCIE_RESET_READY_POLL_MS);
 }
+EXPORT_SYMBOL_GPL(pci_af_flr);
 
 /**
  * pci_pm_reset - Put device into PCI_D3 and back into PCI_D0.
@@ -4483,7 +4488,7 @@ static int pci_af_flr(struct pci_dev *dev, int probe)
  * by default (i.e. unless the @dev's d3_delay field has a different value).
  * Moreover, only devices in D0 can be reset by this function.
  */
-static int pci_pm_reset(struct pci_dev *dev, int probe)
+int pci_pm_reset(struct pci_dev *dev, int probe)
 {
 	u16 csr;
 
@@ -4512,6 +4517,7 @@ static int pci_pm_reset(struct pci_dev *dev, int probe)
 
 	return pci_dev_wait(dev, "PM D3->D0", PCIE_RESET_READY_POLL_MS);
 }
+EXPORT_SYMBOL_GPL(pci_pm_reset);
 /**
  * pcie_wait_for_link - Wait until link is active or inactive
  * @pdev: Bridge device
@@ -4589,7 +4595,7 @@ int pci_bridge_secondary_bus_reset(struct pci_dev *dev)
 }
 EXPORT_SYMBOL_GPL(pci_bridge_secondary_bus_reset);
 
-static int pci_parent_bus_reset(struct pci_dev *dev, int probe)
+int pci_parent_bus_reset(struct pci_dev *dev, int probe)
 {
 	struct pci_dev *pdev;
 
@@ -4606,13 +4612,15 @@ static int pci_parent_bus_reset(struct pci_dev *dev, int probe)
 
 	return pci_bridge_secondary_bus_reset(dev->bus->self);
 }
+EXPORT_SYMBOL_GPL(pci_parent_bus_reset);
 
 static int pci_reset_hotplug_slot(struct hotplug_slot *hotplug, int probe)
 {
 	int rc = -ENOTTY;
 
 	if (!hotplug || !try_module_get(hotplug->ops->owner))
-		return rc;
+		//return rc;
+		return -3;
 
 	if (hotplug->ops->reset_slot)
 		rc = hotplug->ops->reset_slot(hotplug, probe);
@@ -4622,20 +4630,23 @@ static int pci_reset_hotplug_slot(struct hotplug_slot *hotplug, int probe)
 	return rc;
 }
 
-static int pci_dev_reset_slot_function(struct pci_dev *dev, int probe)
+int pci_dev_reset_slot_function(struct pci_dev *dev, int probe)
 {
 	struct pci_dev *pdev;
 
 	if (dev->subordinate || !dev->slot ||
 	    dev->dev_flags & PCI_DEV_FLAGS_NO_BUS_RESET)
-		return -ENOTTY;
+		//return -ENOTTY;
+		return -1;
 
 	list_for_each_entry(pdev, &dev->bus->devices, bus_list)
 		if (pdev != dev && pdev->slot == dev->slot)
-			return -ENOTTY;
+			//return -ENOTTY;
+			return -2;
 
 	return pci_reset_hotplug_slot(dev->slot->hotplug, probe);
 }
+EXPORT_SYMBOL_GPL(pci_dev_reset_slot_function);
 
 static void pci_dev_lock(struct pci_dev *dev)
 {

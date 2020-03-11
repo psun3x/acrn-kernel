@@ -1113,6 +1113,10 @@ u32 pcie_bandwidth_available(struct pci_dev *dev, struct pci_dev **limiting_dev,
 void pcie_print_link_status(struct pci_dev *dev);
 bool pcie_has_flr(struct pci_dev *dev);
 int pcie_flr(struct pci_dev *dev);
+int pci_af_flr(struct pci_dev *dev, int probe);
+int pci_pm_reset(struct pci_dev *dev, int probe);
+int pci_dev_reset_slot_function(struct pci_dev *dev, int probe);
+int pci_parent_bus_reset(struct pci_dev *dev, int probe);
 int __pci_reset_function_locked(struct pci_dev *dev);
 int pci_reset_function(struct pci_dev *dev);
 int pci_reset_function_locked(struct pci_dev *dev);
