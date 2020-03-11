@@ -599,6 +599,7 @@ static int i915_suspend_switcheroo(struct drm_device *dev, pm_message_t state);
 static void i915_switcheroo_set_state(struct pci_dev *pdev, enum vga_switcheroo_state state)
 {
 	struct drm_device *dev = pci_get_drvdata(pdev);
+	struct drm_i915_private *dev_priv = to_i915(dev);
 	pm_message_t pmm = { .event = PM_EVENT_SUSPEND };
 
 	if (state == VGA_SWITCHEROO_ON) {
@@ -608,11 +609,13 @@ static void i915_switcheroo_set_state(struct pci_dev *pdev, enum vga_switcheroo_
 		pci_set_power_state(pdev, PCI_D0);
 		i915_resume_switcheroo(dev);
 		dev->switch_power_state = DRM_SWITCH_POWER_ON;
+		printk("[DEBUG_SUN]i915_switcheroo_set_state POWER_ON: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	} else {
 		pr_info("switched off\n");
 		dev->switch_power_state = DRM_SWITCH_POWER_CHANGING;
 		i915_suspend_switcheroo(dev, pmm);
 		dev->switch_power_state = DRM_SWITCH_POWER_OFF;
+		printk("[DEBUG_SUN]i915_switcheroo_set_state POWER_OFF: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	}
 }
 
@@ -1390,6 +1393,7 @@ int i915_driver_load(struct pci_dev *pdev, const struct pci_device_id *ent)
 	int ret;
 	int num_crtcs = 0;
 
+	printk("DEBUG_SUN:i915_driver_load\n");
 	/* Enable nuclear pageflip on ILK+ */
 	if (!i915_modparams.nuclear_pageflip && match_info->gen < 5)
 		driver.driver_features &= ~DRIVER_ATOMIC;
@@ -1486,6 +1490,7 @@ void i915_driver_unload(struct drm_device *dev)
 	struct drm_i915_private *dev_priv = to_i915(dev);
 	struct pci_dev *pdev = dev_priv->drm.pdev;
 
+	printk("DEBUG_SUN:i915_driver_unload\n");
 	i915_driver_unregister(dev_priv);
 
 	if (!i915_modparams.enable_initial_modeset)
@@ -1530,6 +1535,7 @@ static void i915_driver_release(struct drm_device *dev)
 {
 	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("DEBUG_SUN:i915_driver_release\n");
 	i915_driver_cleanup_early(dev_priv);
 	drm_dev_fini(&dev_priv->drm);
 
@@ -1541,6 +1547,7 @@ static int i915_driver_open(struct drm_device *dev, struct drm_file *file)
 	struct drm_i915_private *i915 = to_i915(dev);
 	int ret;
 
+	printk("DEBUG_SUN:i915_driver_open\n");
 	ret = i915_gem_open(i915, file);
 	if (ret)
 		return ret;
@@ -1562,6 +1569,7 @@ static int i915_driver_open(struct drm_device *dev, struct drm_file *file)
  */
 static void i915_driver_lastclose(struct drm_device *dev)
 {
+	printk("DEBUG_SUN:i915_driver_lastclose\n");
 	if (!i915_modparams.enable_initial_modeset)
 		intel_fbdev_restore_mode(dev);
 	vga_switcheroo_process_delayed_switch();
@@ -1571,6 +1579,7 @@ static void i915_driver_postclose(struct drm_device *dev, struct drm_file *file)
 {
 	struct drm_i915_file_private *file_priv = file->driver_priv;
 
+	printk("DEBUG_SUN:i915_driver_postclose\n");
 	mutex_lock(&dev->struct_mutex);
 	i915_gem_context_close(file);
 	i915_gem_release(dev, file);
@@ -2148,7 +2157,9 @@ static int i915_pm_prepare(struct device *kdev)
 {
 	struct pci_dev *pdev = to_pci_dev(kdev);
 	struct drm_device *dev = pci_get_drvdata(pdev);
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_prepare: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (!dev) {
 		dev_err(kdev, "DRM not initialized, aborting suspend.\n");
 		return -ENODEV;
@@ -2164,7 +2175,9 @@ static int i915_pm_suspend(struct device *kdev)
 {
 	struct pci_dev *pdev = to_pci_dev(kdev);
 	struct drm_device *dev = pci_get_drvdata(pdev);
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_suspend: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (!dev) {
 		dev_err(kdev, "DRM not initialized, aborting suspend.\n");
 		return -ENODEV;
@@ -2179,7 +2192,9 @@ static int i915_pm_suspend(struct device *kdev)
 static int i915_pm_suspend_late(struct device *kdev)
 {
 	struct drm_device *dev = &kdev_to_i915(kdev)->drm;
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_suspend_late: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	/*
 	 * We have a suspend ordering issue with the snd-hda driver also
 	 * requiring our device to be power up. Due to the lack of a
@@ -2198,7 +2213,9 @@ static int i915_pm_suspend_late(struct device *kdev)
 static int i915_pm_poweroff_late(struct device *kdev)
 {
 	struct drm_device *dev = &kdev_to_i915(kdev)->drm;
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_poweroff_late: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (dev->switch_power_state == DRM_SWITCH_POWER_OFF)
 		return 0;
 
@@ -2208,7 +2225,9 @@ static int i915_pm_poweroff_late(struct device *kdev)
 static int i915_pm_resume_early(struct device *kdev)
 {
 	struct drm_device *dev = &kdev_to_i915(kdev)->drm;
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_resume_early: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (dev->switch_power_state == DRM_SWITCH_POWER_OFF)
 		return 0;
 
@@ -2218,7 +2237,9 @@ static int i915_pm_resume_early(struct device *kdev)
 static int i915_pm_resume(struct device *kdev)
 {
 	struct drm_device *dev = &kdev_to_i915(kdev)->drm;
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_resume: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (dev->switch_power_state == DRM_SWITCH_POWER_OFF)
 		return 0;
 
@@ -2230,7 +2251,9 @@ static int i915_pm_freeze(struct device *kdev)
 {
 	struct drm_device *dev = &kdev_to_i915(kdev)->drm;
 	int ret;
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_freeze: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (dev->switch_power_state != DRM_SWITCH_POWER_OFF) {
 		ret = i915_drm_suspend(dev);
 		if (ret)
@@ -2248,7 +2271,9 @@ static int i915_pm_freeze_late(struct device *kdev)
 {
 	struct drm_device *dev = &kdev_to_i915(kdev)->drm;
 	int ret;
+	struct drm_i915_private *dev_priv = to_i915(dev);
 
+	printk("[DEBUG_SUN]i915_pm_freeze_late: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (dev->switch_power_state != DRM_SWITCH_POWER_OFF) {
 		ret = i915_drm_suspend_late(dev, true);
 		if (ret)
@@ -2265,22 +2290,42 @@ static int i915_pm_freeze_late(struct device *kdev)
 /* thaw: called after creating the hibernation image, but before turning off. */
 static int i915_pm_thaw_early(struct device *kdev)
 {
+	struct pci_dev *pdev = to_pci_dev(kdev);
+	struct drm_device *dev = pci_get_drvdata(pdev);
+	struct drm_i915_private *dev_priv = to_i915(dev);
+
+	printk("[DEBUG_SUN]i915_pm_thaw_early: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	return i915_pm_resume_early(kdev);
 }
 
 static int i915_pm_thaw(struct device *kdev)
 {
+	struct pci_dev *pdev = to_pci_dev(kdev);
+	struct drm_device *dev = pci_get_drvdata(pdev);
+	struct drm_i915_private *dev_priv = to_i915(dev);
+
+	printk("[DEBUG_SUN]i915_pm_thaw: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	return i915_pm_resume(kdev);
 }
 
 /* restore: called after loading the hibernation image. */
 static int i915_pm_restore_early(struct device *kdev)
 {
+	struct pci_dev *pdev = to_pci_dev(kdev);
+	struct drm_device *dev = pci_get_drvdata(pdev);
+	struct drm_i915_private *dev_priv = to_i915(dev);
+
+	printk("[DEBUG_SUN]i915_pm_restore_early: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	return i915_pm_resume_early(kdev);
 }
 
 static int i915_pm_restore(struct device *kdev)
 {
+	struct pci_dev *pdev = to_pci_dev(kdev);
+	struct drm_device *dev = pci_get_drvdata(pdev);
+	struct drm_i915_private *dev_priv = to_i915(dev);
+
+	printk("[DEBUG_SUN]i915_pm_restore: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	return i915_pm_resume(kdev);
 }
 
@@ -2652,6 +2697,7 @@ static int intel_runtime_suspend(struct device *kdev)
 	struct drm_i915_private *dev_priv = to_i915(dev);
 	int ret;
 
+	printk("[DEBUG_SUN]intel_runtime_suspend: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (WARN_ON_ONCE(!(dev_priv->gt_pm.rc6.enabled && HAS_RC6(dev_priv))))
 		return -ENODEV;
 
@@ -2747,6 +2793,7 @@ static int intel_runtime_resume(struct device *kdev)
 	struct drm_i915_private *dev_priv = to_i915(dev);
 	int ret = 0;
 
+	printk("[DEBUG_SUN]intel_runtime_resume: MMIO(0x900c) = 0x%x\n", I915_READ(_MMIO(0x900c)));
 	if (WARN_ON_ONCE(!HAS_RUNTIME_PM(dev_priv)))
 		return -ENODEV;
 
