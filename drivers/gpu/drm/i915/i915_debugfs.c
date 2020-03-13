@@ -4775,6 +4775,160 @@ static const struct file_operations i915_fifo_underrun_reset_ops = {
 	.llseek = default_llseek,
 };
 
+//DEBUG_SUN: MI_LOAD_REGISTER_REG test
+static struct i915_vma *prepare_batch(struct drm_i915_private *i915)
+{
+	struct drm_i915_gem_object *obj;
+	struct i915_vma *vma;
+	u32 *cmd;
+	int err;
+
+	obj = i915_gem_object_create_internal(i915, PAGE_SIZE);
+	if (IS_ERR(obj)) {
+		printk("DEBUG_SUN: Create gem object failed!\n");
+		return ERR_CAST(obj);
+	}
+
+	cmd = i915_gem_object_pin_map(obj, I915_MAP_WB);
+	if (IS_ERR(cmd)) {
+		err = PTR_ERR(cmd);
+		printk("DEBUG_SUN: Map gem object failed, err(0x%x)!\n", err);
+		goto err;
+	}
+
+	*cmd = MI_LOAD_REGISTER_REG;
+	*cmd++ = 0x900c;
+	*cmd++ = 0x601b40;
+	*cmd++ = MI_BATCH_BUFFER_END;
+
+	i915_gem_chipset_flush(i915);
+
+	i915_gem_object_unpin_map(obj);
+
+	err = i915_gem_object_set_to_gtt_domain(obj, false);
+	if (err) {
+		printk("DEBUG_SUN: Set gtt domain for gem object failed, err(0x%x)!\n", err);
+		goto err;
+	}
+
+	vma = i915_vma_instance(obj, &i915->ggtt.vm, NULL);
+	if (IS_ERR(vma)) {
+		err = PTR_ERR(vma);
+		printk("DEBUG_SUN: Instance ggtt vma failed, err(0x%x)!\n", err);
+		goto err;
+	}
+
+	err = i915_vma_pin(vma, 0, 0, PIN_USER | PIN_GLOBAL);
+	if (err) {
+		printk("DEBUG_SUN: Pin vma failed, err(0x%x)!\n", err);
+		goto err;
+	}
+
+	return vma;
+
+err:
+	i915_gem_object_put(obj);
+	return ERR_PTR(err);
+}
+
+static struct i915_request *
+submit_request(struct intel_engine_cs *engine,
+	      struct i915_vma *batch)
+{
+	struct i915_request *request;
+	int err;
+
+	request = i915_request_alloc(engine, engine->i915->kernel_context);
+	if (IS_ERR(request)) {
+		printk("DEBUG_SUN: Prepare batch buffer failed, err(0x%x)!\n", err);
+		return request;
+	}
+
+	err = engine->emit_bb_start(request,
+				    batch->node.start,
+				    batch->node.size,
+				    I915_DISPATCH_SECURE);
+	if (err) {
+		printk("DEBUG_SUN: Emit request failed, err(0x%x)!\n", err);
+		goto out_request;
+	}
+
+out_request:
+	i915_request_add(request);
+	return err ? ERR_PTR(err) : request;
+}
+
+static int mi_load_register_test(struct drm_i915_private *dev_priv)
+{
+	struct drm_i915_private *i915 = dev_priv;
+	struct intel_engine_cs *engine;
+	struct i915_vma *batch;
+	unsigned int id;
+	int err = 0;
+
+	mutex_lock(&i915->drm.struct_mutex);
+
+	batch = prepare_batch(i915);
+	if (IS_ERR(batch)) {
+		err = PTR_ERR(batch);
+		printk("DEBUG_SUN: Prepare batch buffer failed, err(0x%x)!\n", err);
+		goto out_unlock;
+	}
+
+	for_each_engine(engine, i915, id) {
+		struct i915_request *request;
+
+		request = submit_request(engine, batch);
+		if (IS_ERR(request)) {
+			err = PTR_ERR(request);
+			printk("DEBUG_SUN: Submit request to engine failed, err(0x%x)!\n", err);
+			goto out_batch;
+		}
+		i915_request_wait(request,
+				  I915_WAIT_LOCKED,
+				  MAX_SCHEDULE_TIMEOUT);
+	}
+
+out_batch:
+	i915_vma_unpin(batch);
+	i915_vma_put(batch);
+out_unlock:
+	mutex_unlock(&i915->drm.struct_mutex);
+	return err;
+}
+
+static ssize_t
+debug_mi_load_register_write(struct file *filp,
+			       const char __user *ubuf,
+			       size_t cnt, loff_t *ppos)
+{
+	struct drm_i915_private *dev_priv = filp->private_data;
+	//struct drm_device *dev = &dev_priv->drm;
+	int ret;
+	bool reset;
+
+	ret = kstrtobool_from_user(ubuf, cnt, &reset);
+	if (ret)
+		return ret;
+
+	if (!reset)
+		return cnt;
+
+	mi_load_register_test(dev_priv);
+	printk("DEBUG_SUN: TEST[MI_LOAD_REGISTER_REG] finished!\n");
+
+	return cnt;
+}
+//DEBUG_SUN_END
+
+static const struct file_operations debug_mi_load_register_fops = {
+	.owner = THIS_MODULE,
+	.open = simple_open,
+	.write = debug_mi_load_register_write,
+	.llseek = default_llseek,
+};
+
+
 static const struct drm_info_list i915_debugfs_list[] = {
 	{"i915_capabilities", i915_capabilities, 0},
 	{"i915_gem_objects", i915_gem_object_info, 0},
@@ -4853,7 +5007,8 @@ static const struct i915_debugfs_files {
 	{"i915_hpd_storm_ctl", &i915_hpd_storm_ctl_fops},
 	{"i915_ipc_status", &i915_ipc_status_fops},
 	{"i915_drrs_ctl", &i915_drrs_ctl_fops},
-	{"i915_edp_psr_debug", &i915_edp_psr_debug_fops}
+	{"i915_edp_psr_debug", &i915_edp_psr_debug_fops},
+	{"debug_mi_load_register", &debug_mi_load_register_fops}
 };
 
 int i915_debugfs_register(struct drm_i915_private *dev_priv)
